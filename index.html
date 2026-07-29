@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comic Studio · ComfyUI</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark">CS</span>
+    <div>
+      <h1>Comic Studio</h1>
+      <p class="brand-sub">Creazione fumetti con ComfyUI <span id="app-version-badge"></span></p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="mode-switch" id="mode-switch" role="group" aria-label="Modalità di generazione">
+      <button type="button" class="mode-btn" id="mode-local-btn" data-mode="local">🖥️ ComfyUI locale</button>
+      <button type="button" class="mode-btn" id="mode-external-btn" data-mode="external">☁️ IA Esterna</button>
+    </div>
+    <div class="connection-badge" id="connection-badge">
+      <span class="dot" id="connection-dot"></span>
+      <span id="connection-label">Non connesso</span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist">
+  <button class="tab-btn active" data-tab="tab-connection" role="tab" aria-selected="true">Connessione ComfyUI</button>
+  <button class="tab-btn" data-tab="tab-providers" role="tab" aria-selected="false">IA Esterne</button>
+  <button class="tab-btn" data-tab="tab-workflows" role="tab" aria-selected="false">Workflow</button>
+  <button class="tab-btn" data-tab="tab-characters" role="tab" aria-selected="false">Personaggi</button>
+  <button class="tab-btn" data-tab="tab-prompt" role="tab" aria-selected="false">Crea Scena</button>
+  <button class="tab-btn" data-tab="tab-archive" role="tab" aria-selected="false">Archivio</button>
+</nav>
+
+<main class="tab-panels">
+
+  <!-- CONNECTION -->
+  <section id="tab-connection" class="tab-panel active">
+    <h2>Connessione a ComfyUI</h2>
+    <p class="hint">Configura l'indirizzo della tua istanza locale di ComfyUI. I dati restano solo su questo browser (localStorage).</p>
+    <form id="connection-form" class="card form-grid">
+      <label>Protocollo
+        <select id="conn-protocol">
+          <option value="http">http</option>
+          <option value="https">https</option>
+        </select>
+      </label>
+      <label>Indirizzo IP / host
+        <input type="text" id="conn-ip" placeholder="127.0.0.1" required>
+      </label>
+      <label>Porta
+        <input type="number" id="conn-port" placeholder="8188" min="1" max="65535" required>
+      </label>
+      <label>Utente (opzionale)
+        <input type="text" id="conn-user" autocomplete="off">
+      </label>
+      <label>Password / API Key (opzionale)
+        <input type="password" id="conn-pass" autocomplete="off">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Salva &amp; Testa connessione</button>
+        <button type="button" id="conn-clear" class="btn ghost">Cancella dati salvati</button>
+      </div>
+    </form>
+    <div id="conn-status" class="status-box"></div>
+  </section>
+
+  <!-- EXTERNAL AI PROVIDERS -->
+  <section id="tab-providers" class="tab-panel">
+    <h2>IA Esterne</h2>
+    <p class="hint">Da usare in modalità "☁️ IA Esterna" (in alto), ad esempio da telefono fuori casa: genera scene e sfondi con un'IA cloud, poi rifiniscile in locale su ComfyUI. Le chiavi restano solo su questo browser.</p>
+    <p class="hint">⚠️ Con personaggio di riferimento: queste sono API generiche di editing immagine, non strumenti dedicati alla coerenza del volto. La somiglianza non è garantita al 100% — <strong>Gemini</strong> di solito la mantiene meglio di <strong>OpenAI</strong>. Per la massima fedeltà del personaggio serve un workflow ComfyUI locale con nodi dedicati (IPAdapter/InstantID/ReActor).</p>
+
+    <div class="card provider-card" data-provider="gemini">
+      <div class="provider-card-header">
+        <h3>Google Gemini</h3>
+        <label class="toggle"><input type="radio" name="active-provider" value="gemini"> Provider attivo</label>
+      </div>
+      <div class="form-grid">
+        <label>API Key (Google AI Studio)
+          <input type="password" class="provider-apikey" autocomplete="off">
+        </label>
+        <label>Modello
+          <input type="text" class="provider-model" placeholder="gemini-2.5-flash-image">
+        </label>
+      </div>
+      <p class="hint small">Supporta immagine di riferimento del personaggio.</p>
+      <div class="form-actions">
+        <button type="button" class="btn primary provider-save">Salva</button>
+        <button type="button" class="btn ghost provider-clear">Cancella</button>
+      </div>
+    </div>
+
+    <div class="card provider-card" data-provider="openai">
+      <div class="provider-card-header">
+        <h3>OpenAI (ChatGPT / DALL·E)</h3>
+        <label class="toggle"><input type="radio" name="active-provider" value="openai"> Provider attivo</label>
+      </div>
+      <div class="form-grid">
+        <label>API Key (OpenAI)
+          <input type="password" class="provider-apikey" autocomplete="off">
+        </label>
+        <label>Modello
+          <input type="text" class="provider-model" placeholder="gpt-image-1">
+        </label>
+      </div>
+      <p class="hint small">Supporta immagine di riferimento del personaggio.</p>
+      <div class="form-actions">
+        <button type="button" class="btn primary provider-save">Salva</button>
+        <button type="button" class="btn ghost provider-clear">Cancella</button>
+      </div>
+    </div>
+
+    <div class="card provider-card" data-provider="leonardo">
+      <div class="provider-card-header">
+        <h3>Leonardo.ai</h3>
+        <label class="toggle"><input type="radio" name="active-provider" value="leonardo"> Provider attivo</label>
+      </div>
+      <div class="form-grid">
+        <label>API Key (Leonardo.ai)
+          <input type="password" class="provider-apikey" autocomplete="off">
+        </label>
+        <label>ID Modello (opzionale)
+          <input type="text" class="provider-model" placeholder="vuoto = default piattaforma">
+        </label>
+      </div>
+      <p class="hint small">Al momento non supporta immagine di riferimento (solo testo → immagine).</p>
+      <div class="form-actions">
+        <button type="button" class="btn primary provider-save">Salva</button>
+        <button type="button" class="btn ghost provider-clear">Cancella</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKFLOWS -->
+  <section id="tab-workflows" class="tab-panel">
+    <h2>Gestione Workflow</h2>
+    <p class="hint">Carica i workflow ComfyUI esportati in formato API (JSON). Seleziona quello attivo e associa i nodi per prompt, immagine di riferimento e seed.</p>
+    <p class="hint">⚠️ Deve essere il formato <strong>API</strong>: in ComfyUI, menu → <strong>"Export (API)"</strong> (se non lo vedi, attiva prima "Dev Mode" nelle Impostazioni, poi usa "Save (API Format)"). Il salvataggio normale del workflow <strong>non</strong> funziona qui.</p>
+    <div class="card">
+      <label class="file-drop" for="workflow-upload">
+        <input type="file" id="workflow-upload" accept="application/json,.json" multiple hidden>
+        <span>📄 Carica workflow (.json)</span>
+      </label>
+    </div>
+    <div id="workflow-list" class="card-grid"></div>
+
+    <div id="workflow-mapping" class="card" hidden>
+      <h3>Mappatura nodi — <span id="mapping-workflow-name"></span></h3>
+      <p class="hint">Indica quali nodi del workflow devono ricevere il prompt positivo, il negativo, l'immagine di riferimento, il seed e (facoltativo) risoluzione, numero di frame e FPS per i flussi di animazione/video.</p>
+      <div class="form-grid" id="mapping-fields"></div>
+      <div class="form-actions">
+        <button id="mapping-save" class="btn primary">Salva mappatura</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARACTERS -->
+  <section id="tab-characters" class="tab-panel">
+    <h2>Gestione Personaggi</h2>
+    <p class="hint">Questo è il tuo archivio personaggi: le immagini restano qui e le richiami nella scheda Prompt per mantenere lo stesso aspetto nelle immagini generate. Tocca l'icona 👁️ su una miniatura per nasconderla/sfocarla (privacy).</p>
+    <p class="hint">💡 Per generare a mano su ChatGPT/Gemini (fuori dall'app, es. col tuo abbonamento Plus): usa "Copia" sul prompt nella scheda Prompt, poi qui "📋 Copia immagine" sul personaggio — incolla entrambi nella chat.</p>
+    <div class="card upload-row">
+      <label class="file-drop" for="character-upload">
+        <input type="file" id="character-upload" accept="image/*" multiple hidden>
+        <span>🖼️ Carica dalla galleria</span>
+      </label>
+      <label class="file-drop" for="character-camera-upload">
+        <input type="file" id="character-camera-upload" accept="image/*" capture="environment" hidden>
+        <span>📷 Scatta foto personaggio</span>
+      </label>
+    </div>
+    <div id="character-grid" class="card-grid"></div>
+  </section>
+
+  <!-- CREA SCENA (flusso unico: personaggio → scena → regia → genera) -->
+  <section id="tab-prompt" class="tab-panel">
+    <h2>Crea Scena</h2>
+    <p class="hint">Percorso completo su una sola schermata: scegli il personaggio, scrivi la scena, imposta la camera, poi genera. La modalità IA (in alto) resta valida per tutti i passaggi.</p>
+    <p class="status-box" id="prompt-mode-indicator"></p>
+
+    <div class="card form-grid">
+      <h3 class="step-title full">1. Personaggio</h3>
+      <div class="full" id="prompt-character-slots"></div>
+      <label class="full">Descrizione personaggio (opzionale, italiano)
+        <div class="textarea-with-mic">
+          <textarea id="prompt-character-desc-it" rows="3" placeholder="Es: capelli rossi mossi, occhi verdi, cicatrice sopra il sopracciglio destro, voce calma e sicura"></textarea>
+          <button type="button" id="prompt-character-desc-it-mic" class="mic-btn" title="Detta a voce">🎤</button>
+        </div>
+        <span class="hint small">Dettagli del personaggio (non della scena/azione): si aggiungono all'inizio del prompt insieme alla descrizione della scena qui sotto.</span>
+      </label>
+      <label class="full">Riferimento posa (opzionale, guida solo la posa/azione — non l'identità)
+        <input type="file" id="prompt-pose-upload" accept="image/*">
+        <span class="hint small">Usata solo dai nodi immagine mappati con sorgente "Posa" nella scheda Workflow. Se non carichi nulla, quei nodi restano semplicemente non impostati: nessun errore.</span>
+      </label>
+      <div class="full" id="prompt-pose-preview"></div>
+      <p class="status-box full" id="prompt-character-hint"></p>
+
+      <label class="full checkbox-row">
+        <input type="checkbox" id="prompt-coherent-mode-toggle">
+        Modalità "Personaggio Coerente" (blocco di coerenza automatico + posa guidata)
+      </label>
+      <label>Posa/azione guidata
+        <select id="prompt-coherent-preset"></select>
+      </label>
+      <div class="full strength-sliders" id="prompt-strength-sliders">
+        <label>Forza identità
+          <input type="range" id="prompt-strength-identity" min="0" max="100" value="70">
+        </label>
+        <label>Forza corpo/costume
+          <input type="range" id="prompt-strength-character" min="0" max="100" value="70">
+        </label>
+        <label>Forza posa
+          <input type="range" id="prompt-strength-pose" min="0" max="100" value="70">
+        </label>
+        <label>Coerenza volto
+          <input type="range" id="prompt-strength-face-coherence" min="0" max="100" value="70">
+        </label>
+        <label>Coerenza costume
+          <input type="range" id="prompt-strength-costume-coherence" min="0" max="100" value="70">
+        </label>
+        <label>Libertà creativa scenario
+          <input type="range" id="prompt-strength-scene-freedom" min="0" max="100" value="60">
+        </label>
+      </div>
+      <div class="full" id="prompt-mapping-summary"></div>
+    </div>
+
+    <div class="card form-grid">
+      <h3 class="step-title full">2. Scena</h3>
+      <label class="full">Descrizione scena (italiano)
+        <div class="textarea-with-mic">
+          <textarea id="prompt-input-it" rows="4" placeholder="Es: primo piano di una ragazza guerriera con capelli rossi, armatura scintillante, luce drammatica al tramonto"></textarea>
+          <button type="button" id="prompt-input-it-mic" class="mic-btn" title="Detta a voce">🎤</button>
+        </div>
+      </label>
+      <label>Stile / medium
+        <select id="prompt-style">
+          <option value="" selected>Nessuno / personalizzato</option>
+          <option value="comic book illustration, bold ink outlines, cel shading">Fumetto classico</option>
+          <option value="manga style, screentone shading, dynamic linework">Manga</option>
+          <option value="graphic novel, painterly digital art, moody colors">Graphic novel</option>
+          <option value="western comic cover art, dynamic pose, halftone print">Cover americana</option>
+        </select>
+      </label>
+      <label>Formato immagine
+        <select id="prompt-aspect-ratio">
+          <option value="" data-tag="" data-width="" data-height="" selected>Automatico (nessuna modifica)</option>
+          <option value="1:1" data-tag="square aspect ratio" data-width="1024" data-height="1024">1:1 Quadrato</option>
+          <option value="16:9" data-tag="16:9 widescreen aspect ratio" data-width="1344" data-height="768">16:9 Orizzontale</option>
+          <option value="9:16" data-tag="9:16 vertical aspect ratio, portrait orientation" data-width="768" data-height="1344">9:16 Verticale</option>
+          <option value="4:3" data-tag="4:3 aspect ratio" data-width="1152" data-height="896">4:3 Orizzontale classico</option>
+          <option value="3:4" data-tag="3:4 aspect ratio, portrait orientation" data-width="896" data-height="1152">3:4 Verticale classico</option>
+          <option value="21:9" data-tag="21:9 ultra-widescreen cinematic aspect ratio" data-width="1536" data-height="640">21:9 Cinematografico</option>
+        </select>
+        <span class="hint small">Aggiunge un'indicazione al prompt e, se hai mappato un nodo "Risoluzione" nel Workflow, imposta anche larghezza/altezza reali.</span>
+      </label>
+      <label>Numero di frame (animazione, facoltativo)
+        <input type="number" id="prompt-frame-count" min="1" step="1" placeholder="es. 16">
+        <span class="hint small">Solo per workflow di animazione con un nodo "Numero di frame" mappato nel Workflow.</span>
+      </label>
+      <label>FPS (animazione, facoltativo)
+        <input type="number" id="prompt-fps" min="1" step="1" placeholder="es. 8">
+        <span class="hint small" id="prompt-duration-hint"></span>
+      </label>
+      <label class="full">Qualità / dettaglio (facoltativo, seleziona quanti vuoi)
+        <div class="checkbox-group" id="prompt-quality-options">
+          <label class="checkbox-inline"><input type="checkbox" value="high resolution, ultra high definition"> Alta risoluzione</label>
+          <label class="checkbox-inline"><input type="checkbox" value="photorealistic, realistic photography, DSLR photo"> Fotorealistico</label>
+          <label class="checkbox-inline"><input type="checkbox" value="ultra detailed, intricate details, fine details"> Ultra dettagliato</label>
+          <label class="checkbox-inline"><input type="checkbox" value="cinematic composition, film still, anamorphic lens"> Cinematografico</label>
+          <label class="checkbox-inline"><input type="checkbox" value="8k resolution"> 8K</label>
+          <label class="checkbox-inline"><input type="checkbox" value="HDR, high dynamic range"> HDR</label>
+        </div>
+      </label>
+      <label>Elementi negativi aggiuntivi (italiano, opzionale)
+        <div class="textarea-with-mic">
+          <textarea id="prompt-input-neg-it" rows="2" placeholder="Es: occhiali, cappello, sfondo urbano"></textarea>
+          <button type="button" id="prompt-input-neg-it-mic" class="mic-btn" title="Detta a voce">🎤</button>
+        </div>
+        <span class="hint small">Un prompt negativo per l'anatomia corretta è già incluso di default; qui aggiungi solo cose extra da evitare.</span>
+      </label>
+    </div>
+
+    <div class="card">
+      <h3 class="step-title">3. Regia (camera)</h3>
+      <p class="hint">Trascina l'icona 📷 nei diagrammi per decidere da dove verrà "vista" l'immagine, poi applica alla scena. Non usa la fotocamera del telefono: sono schemi visivi.</p>
+      <div class="director-layout">
+        <div class="director-diagrams">
+          <div class="director-diagram-box">
+            <h3>Vista dall'alto (angolo + zoom)</h3>
+            <canvas id="director-topdown" width="240" height="240"></canvas>
+            <p class="director-diagram-label" id="director-topdown-label">Frontale</p>
+            <p class="hint small">La freccia verde indica dove guarda il personaggio. Trascina la 📷 anche più vicina o lontana per zoomare — si aggiorna anche il riquadro Zoom qui a destra.</p>
+          </div>
+          <div class="director-diagram-box">
+            <h3>Vista laterale (sopra / occhi / sotto)</h3>
+            <canvas id="director-elevation" width="200" height="240"></canvas>
+            <p class="director-diagram-label" id="director-elevation-label">Altezza occhi</p>
+          </div>
+          <div class="director-diagram-box">
+            <h3>Zoom / Inquadratura</h3>
+            <canvas id="director-framing" width="160" height="240"></canvas>
+            <p class="director-diagram-label" id="director-framing-label">Piano medio</p>
+            <p class="hint small">Trascina la linea: l'area scura è ciò che resta fuori dall'inquadratura (collegato alla vista dall'alto).</p>
+          </div>
+        </div>
+        <div class="director-controls">
+          <div class="scene-preview">
+            <h3>📋 Anteprima scena</h3>
+            <ul>
+              <li><strong>Vista:</strong> <span id="preview-topdown">Frontale</span></li>
+              <li><strong>Altezza camera:</strong> <span id="preview-elevation">Altezza occhi</span></li>
+              <li><strong>Zoom:</strong> <span id="preview-framing">Piano americano (tre quarti)</span></li>
+              <li><strong>Illuminazione:</strong> <span id="preview-lighting">Naturale morbida</span></li>
+              <li><strong>Composizione:</strong> <span id="preview-composition">Regola dei terzi</span></li>
+            </ul>
+          </div>
+          <label>Illuminazione
+            <select id="director-lighting">
+              <option value="soft natural lighting">Naturale morbida</option>
+              <option value="dramatic rim lighting">Controluce drammatico</option>
+              <option value="cinematic backlight, lens flare">Controluce cinematografico</option>
+              <option value="neon lighting, cyberpunk glow">Neon</option>
+              <option value="golden hour sunset lighting">Ora dorata (tramonto)</option>
+              <option value="hard studio spotlight, high contrast">Faretto da studio</option>
+            </select>
+          </label>
+          <label>Composizione
+            <select id="director-composition">
+              <option value="rule of thirds composition">Regola dei terzi</option>
+              <option value="centered symmetrical composition">Simmetrica centrale</option>
+              <option value="dynamic diagonal composition">Diagonale dinamica</option>
+              <option value="negative space composition">Spazio negativo</option>
+            </select>
+          </label>
+          <div class="form-actions">
+            <button id="director-apply-btn" class="btn success" type="button">➕ Applica alla scena</button>
+            <button id="director-clear-btn" class="btn ghost" type="button">Svuota</button>
+          </div>
+          <div id="director-applied-list" class="applied-tags"></div>
+        </div>
+      </div>
+      <p class="hint small">Le impostazioni di regia restano salvate anche cambiando scheda o chiudendo il browser.</p>
+    </div>
+
+    <div class="card form-grid">
+      <h3 class="step-title full">4. Traduci</h3>
+      <div class="form-actions full">
+        <button id="prompt-translate-btn" class="btn primary" type="button">Traduci &amp; Ottimizza</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="step-title">5. Genera</h3>
+      <p class="hint small">La modalità (ComfyUI locale / IA Esterna) si sceglie in alto nell'intestazione — resta impostata anche qui.</p>
+      <div class="output-header">
+        <h3>Prompt generato (EN)</h3>
+        <button id="prompt-copy-btn" class="btn small" type="button" title="Copia prompt">📋 Copia</button>
+      </div>
+      <textarea id="prompt-output-en" rows="4" readonly placeholder="Il prompt tradotto e ottimizzato apparirà qui..."></textarea>
+
+      <div class="output-header">
+        <h3>Prompt negativo (EN)</h3>
+        <button id="prompt-copy-neg-btn" class="btn small" type="button" title="Copia prompt negativo">📋 Copia</button>
+      </div>
+      <textarea id="prompt-output-neg-en" rows="2" readonly placeholder="Il prompt negativo tradotto apparirà qui..."></textarea>
+
+      <div class="generate-options">
+        <div class="generate-option">
+          <h4>Opzione A — Genera automaticamente</h4>
+          <p class="hint small">Richiede ComfyUI collegato oppure una API key valida e con credito/quota in "IA Esterne".</p>
+          <div class="form-actions">
+            <button id="prompt-send-btn" class="btn success" type="button">🚀 Invia a ComfyUI</button>
+            <button id="prompt-view-archive-btn" class="btn primary" type="button" hidden>📂 Vedi in Archivio</button>
+          </div>
+          <div id="prompt-send-status" class="status-box"></div>
+        </div>
+
+        <div class="generate-option">
+          <h4>Opzione B — Genera senza API (copia e incolla)</h4>
+          <p class="hint small">Nessuna API key richiesta: usa il sito/app che hai già (es. ChatGPT Plus, Gemini). Copia il prompt, apri l'IA, incolla lì il testo e poi l'immagine del personaggio (scheda Personaggi → Copia immagine).</p>
+          <div class="form-actions">
+            <button id="prompt-copy-open-btn" class="btn primary" type="button">📋🔗 Genera senza API — copia e apri</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="step-title">💾 Scene salvate</h3>
+      <p class="hint small">Salva l'intera configurazione (testo scena, personaggio, camera, luci, composizione) per riprenderla in seguito — non l'immagine generata.</p>
+      <div class="form-actions">
+        <input type="text" id="scene-name-input" placeholder="Nome scena (opzionale)">
+        <button id="scene-save-btn" class="btn primary" type="button">💾 Salva scena</button>
+      </div>
+      <div id="scenes-list" class="card-grid"></div>
+    </div>
+  </section>
+
+  <!-- ARCHIVE -->
+  <section id="tab-archive" class="tab-panel">
+    <h2>Archivio Immagini</h2>
+    <p class="hint">Tutte le immagini generate. Tocca l'icona 👁️ su un'immagine per nasconderla/sfocarla (privacy); "Attiva" la include nel progetto corrente.</p>
+    <div class="archive-toolbar">
+      <label class="checkbox-row"><input type="checkbox" id="archive-filter-active"> Solo attive</label>
+      <label class="checkbox-row"><input type="checkbox" id="archive-filter-private"> Solo private</label>
+    </div>
+    <div id="archive-grid" class="card-grid"></div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  <span id="app-version-label"></span> ·
+  <span class="hint small">🎬 Prossimamente: mappatura video Wan 2.1/2.2 I2V e LTX-Video (fotogramma iniziale dall'immagine generata, durata fino a 10s) — struttura dati già predisposta.</span>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
