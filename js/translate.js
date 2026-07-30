@@ -68,14 +68,67 @@ function localDictionaryTranslate(text) {
   return result;
 }
 
-async function myMemoryTranslate(text, signal) {
-  const params = new URLSearchParams({ q: text, langpair: "it|en" });
-  const response = await fetch(`${MYMEMORY_ENDPOINT}?${params.toString()}`, { signal });
-  if (!response.ok) throw new Error(`Translation API responded ${response.status}`);
-  const data = await response.json();
-  const translated = data?.responseData?.translatedText;
-  if (!translated) throw new Error("Translation API returned no text");
-  return translated;
+// MyMemory's free/anonymous tier rejects any single request over ~500
+// characters — but instead of a real HTTP error it replies HTTP 200 with
+// the literal string "QUERY LENGTH LIMIT EXCEEDED, MAX ALLOWED QUERY : 500
+// CHARS" as the "translation", so a naive caller happily treats that error
+// message as real translated text and it ends up baked into the prompt.
+const MYMEMORY_MAX_CHARS = 480; // safety margin under their ~500 char cap
+
+function isMyMemoryLengthError(text) {
+  return /QUERY LENGTH LIMIT EXCEEDED/i.test(text || "");
+}
+
+// Splits text into pieces that fit MyMemory's per-request limit, preferring
+// sentence boundaries so translation quality isn't hurt by a mid-sentence
+// cut; a single sentence longer than the limit is hard-split as a last resort.
+function splitForTranslation(text, maxChars) {
+  if (text.length <= maxChars) return [text];
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const chunks = [];
+  let current = "";
+  for (const sentence of sentences) {
+    const candidate = current ? `${current} ${sentence}` : sentence;
+    if (candidate.length > maxChars && current) {
+      chunks.push(current);
+      current = sentence;
+    } else {
+      current = candidate;
+    }
+    while (current.length > maxChars) {
+      chunks.push(current.slice(0, maxChars));
+      current = current.slice(maxChars);
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
+async function myMemoryTranslateChunk(text) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
+  try {
+    const params = new URLSearchParams({ q: text, langpair: "it|en" });
+    const response = await fetch(`${MYMEMORY_ENDPOINT}?${params.toString()}`, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Translation API responded ${response.status}`);
+    const data = await response.json();
+    const translated = data?.responseData?.translatedText;
+    if (!translated || isMyMemoryLengthError(translated)) {
+      throw new Error("Translation API rejected the request (query too long or empty response)");
+    }
+    return translated;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function myMemoryTranslate(text) {
+  const chunks = splitForTranslation(text, MYMEMORY_MAX_CHARS);
+  const translatedChunks = [];
+  for (const chunk of chunks) {
+    translatedChunks.push(await myMemoryTranslateChunk(chunk));
+  }
+  return translatedChunks.join(" ");
 }
 
 /**
@@ -87,10 +140,7 @@ export async function translateItToEn(text) {
   if (!trimmed) return { text: "", source: "none" };
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
-    const translated = await myMemoryTranslate(trimmed, controller.signal);
-    clearTimeout(timeout);
+    const translated = await myMemoryTranslate(trimmed);
     return { text: translated, source: "api" };
   } catch {
     return { text: localDictionaryTranslate(trimmed), source: "dictionary" };
