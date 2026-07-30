@@ -1,5 +1,5 @@
 import { db } from "./db.js";
-import { qs, el, uid, toast, formatDate } from "./utils.js";
+import { qs, el, uid, toast, formatDate, downloadBlob, sanitizeFilename } from "./utils.js";
 import { getActiveWorkflowId, setActiveWorkflowId } from "./state.js";
 
 const STORE = "workflows";
@@ -328,6 +328,12 @@ function renderList() {
           onclick: () => renderMappingPanel(workflow),
         }, "Mappa nodi"),
         el("button", {
+          class: "btn small",
+          type: "button",
+          title: "Scarica il file .json del workflow per aprirlo/modificarlo (es. in ComfyUI o in un editor di testo)",
+          onclick: () => downloadWorkflow(workflow),
+        }, "📂 Apri (scarica)"),
+        el("button", {
           class: "btn small danger",
           type: "button",
           onclick: () => removeWorkflow(workflow.id),
@@ -336,6 +342,15 @@ function renderList() {
     ]);
     root.appendChild(card);
   }
+}
+
+// Lets the user open/edit the raw ComfyUI graph outside the app (text
+// editor, or re-imported into ComfyUI's own UI) — exports exactly the
+// API-format JSON that was uploaded, without our app's own id/mapping
+// metadata, so it stays directly re-usable in ComfyUI as-is.
+function downloadWorkflow(workflow) {
+  const blob = new Blob([JSON.stringify(workflow.json, null, 2)], { type: "application/json" });
+  downloadBlob(blob, `${sanitizeFilename(workflow.name)}.json`);
 }
 
 async function removeWorkflow(id) {
