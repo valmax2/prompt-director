@@ -193,6 +193,15 @@
         <span>📷 Scatta foto personaggio</span>
       </label>
     </div>
+    <div id="character-pending-preview" class="card" hidden>
+      <h3 class="step-title">Anteprima — prima di caricare</h3>
+      <p class="hint small">Controlla le foto, scegli se tenerle private (sfocate finché non le sblocchi tu) o pubbliche, poi conferma.</p>
+      <div id="character-pending-list" class="card-grid"></div>
+      <div class="form-actions">
+        <button type="button" id="character-pending-confirm-btn" class="btn success">✅ Carica</button>
+        <button type="button" id="character-pending-cancel-btn" class="btn ghost">✕ Annulla</button>
+      </div>
+    </div>
     <div id="character-grid" class="card-grid"></div>
   </section>
 

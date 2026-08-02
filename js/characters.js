@@ -166,12 +166,12 @@ async function removeCharacter(id) {
   toast("Personaggio eliminato.", "info");
 }
 
-export async function addCharacterFromBlob(blob, name) {
+export async function addCharacterFromBlob(blob, name, visible = true) {
   const record = {
     id: uid(),
     name: sanitizeFilename(name),
     blob,
-    visible: true,
+    visible,
     createdAt: Date.now(),
   };
   await db.put(STORE, record);
@@ -179,6 +179,68 @@ export async function addCharacterFromBlob(blob, name) {
   renderGrid();
   notifyUpdated();
   return record;
+}
+
+// Selected files don't get saved straight away — they land in a small
+// preview list first, each with its own privacy checkbox (private by
+// default, consistent with generated content), so the user sees what
+// they're adding and decides visibility before it's committed.
+let pendingUploads = [];
+
+function clearPendingUploads() {
+  for (const entry of pendingUploads) URL.revokeObjectURL(entry.url);
+  pendingUploads = [];
+  qs("#character-pending-preview").hidden = true;
+  qs("#character-pending-list").innerHTML = "";
+}
+
+function renderPendingUploads() {
+  const panel = qs("#character-pending-preview");
+  const list = qs("#character-pending-list");
+  list.innerHTML = "";
+
+  if (pendingUploads.length === 0) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  pendingUploads.forEach((entry, index) => {
+    const nameInput = el("input", {
+      type: "text",
+      value: entry.name,
+      oninput: () => { entry.name = nameInput.value; },
+    });
+    const privacyToggle = el("label", { class: "toggle" }, [
+      el("input", {
+        type: "checkbox",
+        checked: entry.private ? "checked" : false,
+        onchange: () => { entry.private = privacyCheckbox.checked; },
+      }),
+      "Privata",
+    ]);
+    const privacyCheckbox = privacyToggle.querySelector("input");
+    const thumbImg = el("img", { src: entry.url, alt: entry.name, class: entry.private ? "blurred" : "" });
+    privacyCheckbox.addEventListener("change", () => {
+      thumbImg.className = entry.private ? "blurred" : "";
+    });
+    list.appendChild(
+      el("div", { class: "item-card" }, [
+        el("div", { class: "thumb-wrap" }, [thumbImg]),
+        nameInput,
+        privacyToggle,
+        el("button", {
+          class: "btn small danger",
+          type: "button",
+          onclick: () => {
+            URL.revokeObjectURL(entry.url);
+            pendingUploads.splice(index, 1);
+            renderPendingUploads();
+          },
+        }, "Rimuovi"),
+      ])
+    );
+  });
 }
 
 async function handleUpload(fileList) {
@@ -191,9 +253,23 @@ async function handleUpload(fileList) {
       toast(`${file.name}: file troppo grande (max ${formatBytes(MAX_SIZE)}).`, "error");
       continue;
     }
-    await addCharacterFromBlob(file, file.name.replace(/\.[^/.]+$/, ""));
+    pendingUploads.push({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      private: true,
+    });
   }
-  toast("Personaggi caricati.", "success");
+  renderPendingUploads();
+}
+
+async function confirmPendingUploads() {
+  const toAdd = pendingUploads;
+  clearPendingUploads();
+  for (const entry of toAdd) {
+    await addCharacterFromBlob(entry.file, entry.name, !entry.private);
+  }
+  toast(`${toAdd.length} personaggio/i caricato/i.`, "success");
 }
 
 export async function initCharacters() {
@@ -207,5 +283,10 @@ export async function initCharacters() {
   qs("#character-camera-upload").addEventListener("change", (e) => {
     if (e.target.files?.length) handleUpload(e.target.files);
     e.target.value = "";
+  });
+  qs("#character-pending-confirm-btn").addEventListener("click", confirmPendingUploads);
+  qs("#character-pending-cancel-btn").addEventListener("click", () => {
+    clearPendingUploads();
+    toast("Caricamento annullato.", "info");
   });
 }
