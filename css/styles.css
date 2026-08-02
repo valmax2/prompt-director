@@ -319,6 +319,37 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .item-card .row { display: flex; gap: 6px; flex-wrap: wrap; }
 .item-card.active-workflow { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
+/* Workflow cards start collapsed to a single-line name button — click to
+   expand in place instead of every workflow always showing its full details. */
+.item-card.workflow-card { padding: 0; gap: 0; }
+.workflow-card-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--radius);
+}
+.workflow-card-toggle:hover { background: rgba(255, 255, 255, 0.05); }
+.workflow-card-toggle-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workflow-card-toggle-chevron { flex-shrink: 0; color: var(--text-dim); transition: transform 0.15s ease; }
+.workflow-card-toggle.expanded .workflow-card-toggle-chevron { transform: rotate(180deg); }
+.workflow-card-details { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.workflow-card-details[hidden] { display: none; }
+
 .toggle {
   display: inline-flex;
   align-items: center;

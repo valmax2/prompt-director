@@ -322,13 +322,16 @@ async function setWorkflowMediaType(workflow, mediaType) {
   renderList();
 }
 
+// Collapsed to a single-line name button by default (so a long list of
+// workflows doesn't eat the whole screen) — clicking it expands the same
+// card in place to reveal the details/actions, instead of always showing
+// every button for every workflow at once.
 function buildWorkflowCard(workflow, isActive) {
   const nodeCount = Object.keys(workflow.json || {}).length;
   const mediaType = workflow.mediaType || "image";
-  return el("div", { class: `item-card${isActive ? " active-workflow" : ""}` }, [
-    el("div", { class: "name", text: workflow.name }),
+
+  const details = el("div", { class: "workflow-card-details", hidden: true }, [
     el("div", { class: "meta", text: `${nodeCount} nodi · ${formatDate(workflow.createdAt)}` }),
-    el("div", { class: "meta", text: isActive ? "✅ Attivo" : "" }),
     el("div", { class: "row" }, [
       el("button", {
         class: "btn small",
@@ -365,6 +368,24 @@ function buildWorkflowCard(workflow, isActive) {
       }, "Elimina"),
     ]),
   ]);
+
+  const toggleBtn = el(
+    "button",
+    {
+      type: "button",
+      class: "workflow-card-toggle",
+      onclick: () => {
+        details.hidden = !details.hidden;
+        toggleBtn.classList.toggle("expanded", !details.hidden);
+      },
+    },
+    [
+      el("span", { class: "workflow-card-toggle-name" }, `${isActive ? "✅ " : ""}${workflow.name}`),
+      el("span", { class: "workflow-card-toggle-chevron" }, "▾"),
+    ]
+  );
+
+  return el("div", { class: `item-card workflow-card${isActive ? " active-workflow" : ""}` }, [toggleBtn, details]);
 }
 
 function renderList() {
