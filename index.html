@@ -9,6 +9,16 @@
 <body>
 <div id="toast-root" class="toast-root" aria-live="polite"></div>
 
+<div id="picker-modal-overlay" class="picker-modal-overlay" hidden>
+  <div class="picker-modal-box">
+    <div class="picker-modal-header">
+      <h3 id="picker-modal-title"></h3>
+      <button type="button" id="picker-modal-close-btn" class="btn small">✕ Chiudi</button>
+    </div>
+    <div id="picker-modal-body" class="picker-modal-body"></div>
+  </div>
+</div>
+
 <header class="app-header">
   <div class="brand">
     <span class="brand-mark">CS</span>
@@ -247,15 +257,13 @@
           <button type="button" id="prompt-input-it-mic" class="mic-btn" title="Detta a voce">🎤</button>
         </div>
       </label>
-      <label>Stile / medium
-        <select id="prompt-style">
-          <option value="" selected>Nessuno / personalizzato</option>
-          <option value="comic book illustration, bold ink outlines, cel shading">Fumetto classico</option>
-          <option value="manga style, screentone shading, dynamic linework">Manga</option>
-          <option value="graphic novel, painterly digital art, moody colors">Graphic novel</option>
-          <option value="western comic cover art, dynamic pose, halftone print">Cover americana</option>
-        </select>
-      </label>
+      <div class="picker-field">
+        <span class="picker-field-label">Stile / medium</span>
+        <div class="picker-field-row">
+          <span id="prompt-style-current" class="picker-current-value">Nessuno / personalizzato</span>
+          <button type="button" id="prompt-style-edit-btn" class="btn small">🎨 Modifica stile</button>
+        </div>
+      </div>
       <label>Formato immagine
         <select id="prompt-aspect-ratio">
           <option value="" data-tag="" data-width="" data-height="" selected>Automatico (nessuna modifica)</option>
@@ -333,16 +341,27 @@
               <li><strong>Composizione:</strong> <span id="preview-composition">Regola dei terzi</span></li>
             </ul>
           </div>
-          <label>Illuminazione
-            <select id="director-lighting">
-              <option value="soft natural lighting">Naturale morbida</option>
-              <option value="dramatic rim lighting">Controluce drammatico</option>
-              <option value="cinematic backlight, lens flare">Controluce cinematografico</option>
-              <option value="neon lighting, cyberpunk glow">Neon</option>
-              <option value="golden hour sunset lighting">Ora dorata (tramonto)</option>
-              <option value="hard studio spotlight, high contrast">Faretto da studio</option>
-            </select>
-          </label>
+          <div class="picker-field">
+            <span class="picker-field-label">Illuminazione</span>
+            <div class="picker-field-row">
+              <span id="director-lighting-current" class="picker-current-value">Naturale morbida</span>
+              <button type="button" id="director-lighting-edit-btn" class="btn small">💡 Modifica luce</button>
+            </div>
+          </div>
+          <div class="picker-field">
+            <span class="picker-field-label">Obiettivo (facoltativo)</span>
+            <div class="picker-field-row">
+              <span id="director-lens-current" class="picker-current-value">— nessuno —</span>
+              <button type="button" id="director-lens-edit-btn" class="btn small">🎥 Modifica obiettivo</button>
+            </div>
+          </div>
+          <div class="picker-field">
+            <span class="picker-field-label">Inquadratura speciale (facoltativo)</span>
+            <div class="picker-field-row">
+              <span id="director-shot-current" class="picker-current-value">— nessuna —</span>
+              <button type="button" id="director-shot-edit-btn" class="btn small">🎬 Modifica inquadratura</button>
+            </div>
+          </div>
           <label>Composizione
             <select id="director-composition">
               <option value="rule of thirds composition">Regola dei terzi</option>

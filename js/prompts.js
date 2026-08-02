@@ -9,10 +9,29 @@ import { getAppliedDirectorTags } from "./director.js";
 import { generateImageExternal, getProviderMeta, ProviderError } from "./providers.js";
 import { initVoiceDictation } from "./voice.js";
 import { COHERENT_MODE_PRESETS, buildConsistencyBlock } from "./consistency.js";
+import { STYLE_GROUPS } from "./catalogs.js";
+import { openPickerModal } from "./picker-modal.js";
 
 const sessionClientId = uid();
 const DRAFT_KEY = "comic-studio:prompt-draft";
 let lastGenerated = { positive: "", negative: "" };
+
+// Style is picked via the big "Modifica stile" modal instead of a <select>,
+// so its value lives here instead of on a form element's .value.
+let selectedStyleTag = "";
+
+function findStyleByTag(tag) {
+  for (const group of STYLE_GROUPS) {
+    const found = group.options.find((o) => o.tag === tag);
+    if (found) return found;
+  }
+  return null;
+}
+
+function setSelectedStyle(tag) {
+  selectedStyleTag = tag || "";
+  qs("#prompt-style-current").textContent = selectedStyleTag ? findStyleByTag(selectedStyleTag)?.label || "Personalizzato" : "Nessuno / personalizzato";
+}
 
 // Raw translated text (before style/quality/director tags get layered on),
 // kept separately so the displayed prompt can be rebuilt instantly whenever
@@ -78,7 +97,7 @@ function saveDraft() {
     sceneIt: qs("#prompt-input-it").value,
     negIt: qs("#prompt-input-neg-it").value,
     characterDescIt: qs("#prompt-character-desc-it").value,
-    style: qs("#prompt-style").value,
+    style: selectedStyleTag,
     qualityTags: getQualityTags(),
     aspectRatio: qs("#prompt-aspect-ratio").value,
     frameCount: qs("#prompt-frame-count").value,
@@ -121,7 +140,7 @@ function restoreDraft() {
   qs("#prompt-input-it").value = draft.sceneIt || "";
   qs("#prompt-input-neg-it").value = draft.negIt || "";
   qs("#prompt-character-desc-it").value = draft.characterDescIt || "";
-  if (draft.style !== undefined) qs("#prompt-style").value = draft.style;
+  if (draft.style !== undefined) setSelectedStyle(draft.style);
   if (draft.aspectRatio !== undefined) qs("#prompt-aspect-ratio").value = draft.aspectRatio;
   setQualityTags(draft.qualityTags);
   qs("#prompt-frame-count").value = draft.frameCount || "";
@@ -150,7 +169,7 @@ export function getSceneDraftForSaving() {
     sceneIt: qs("#prompt-input-it").value,
     negIt: qs("#prompt-input-neg-it").value,
     characterDescIt: qs("#prompt-character-desc-it").value,
-    style: qs("#prompt-style").value,
+    style: selectedStyleTag,
     qualityTags: getQualityTags(),
     aspectRatio: qs("#prompt-aspect-ratio").value,
     frameCount: qs("#prompt-frame-count").value,
@@ -172,7 +191,7 @@ export function applySceneDraft(draft) {
   qs("#prompt-input-it").value = draft.sceneIt || "";
   qs("#prompt-input-neg-it").value = draft.negIt || "";
   qs("#prompt-character-desc-it").value = draft.characterDescIt || "";
-  if (draft.style !== undefined) qs("#prompt-style").value = draft.style;
+  if (draft.style !== undefined) setSelectedStyle(draft.style);
   if (draft.aspectRatio !== undefined) qs("#prompt-aspect-ratio").value = draft.aspectRatio;
   setQualityTags(draft.qualityTags);
   qs("#prompt-frame-count").value = draft.frameCount || "";
@@ -199,7 +218,7 @@ export function applySceneDraft(draft) {
  */
 function rebuildOutputs() {
   if (lastSceneEn === null) return;
-  const style = qs("#prompt-style").value;
+  const style = selectedStyleTag;
   const directorTags = getAppliedDirectorTags();
   const qualityTags = getQualityTags();
   const aspectTag = getAspectRatioOption().tag;
@@ -844,7 +863,17 @@ export async function initPrompts() {
   qs("#prompt-input-it").addEventListener("input", saveDraft);
   qs("#prompt-input-neg-it").addEventListener("input", saveDraft);
   qs("#prompt-character-desc-it").addEventListener("input", saveDraft);
-  qs("#prompt-style").addEventListener("change", rebuildOutputs);
+  qs("#prompt-style-edit-btn").addEventListener("click", () => {
+    openPickerModal({
+      title: "Scegli lo stile",
+      groups: [{ title: "—", options: [{ key: "none", label: "Nessuno / personalizzato", tag: "", description: "Nessuno stile aggiunto: usa solo la descrizione della scena.", icon: "" }] }, ...STYLE_GROUPS],
+      currentTag: selectedStyleTag,
+      onSelect: (option) => {
+        setSelectedStyle(option.tag);
+        rebuildOutputs();
+      },
+    });
+  });
   qs("#prompt-aspect-ratio").addEventListener("change", rebuildOutputs);
   qsa('#prompt-quality-options input[type="checkbox"]').forEach((cb) => cb.addEventListener("change", rebuildOutputs));
   qs("#prompt-frame-count").addEventListener("input", () => { updateDurationHint(); saveDraft(); });

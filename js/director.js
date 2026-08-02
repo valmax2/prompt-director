@@ -1,4 +1,14 @@
 import { qs, el, toast } from "./utils.js";
+import { LIGHTING_GROUPS, LENS_GROUPS, SHOT_GROUPS } from "./catalogs.js";
+import { openPickerModal } from "./picker-modal.js";
+
+function findByTag(groups, tag) {
+  for (const group of groups) {
+    const found = group.options.find((o) => o.tag === tag);
+    if (found) return found;
+  }
+  return null;
+}
 
 // Visual "virtual camera" pickers: draggable diagrams (no real device camera
 // involved) that let the user decide, by eye, from where the shot should be
@@ -14,9 +24,11 @@ const DEFAULTS = {
   framingBoundaryY: 150, // px along the framing silhouette, smaller = tighter zoom
   lighting: "soft natural lighting",
   composition: "rule of thirds composition",
+  lens: null, // optional, e.g. "wide-angle lens shot" — additive to the framing diagram, not a replacement
+  shotType: null, // optional, e.g. "bird's eye view shot, directly overhead"
 };
 
-const EMPTY_APPLIED = { horizontal: null, vertical: null, framing: null, lighting: null, composition: null };
+const EMPTY_APPLIED = { horizontal: null, vertical: null, framing: null, lighting: null, composition: null, lens: null, shotType: null };
 
 // framingBoundaryY (used by the zoom/framing silhouette diagram) is the
 // single source of truth for "how zoomed in" the shot is. The top-down
@@ -88,10 +100,19 @@ function updateScenePreview() {
   qs("#preview-topdown").textContent = bucketFor(HORIZONTAL_BUCKETS, state.horizontalAngle).it;
   qs("#preview-elevation").textContent = bucketFor(VERTICAL_BUCKETS, state.verticalAngle).it;
   qs("#preview-framing").textContent = bucketFor(FRAMING_BUCKETS, state.framingBoundaryY).it;
-  const lightingSelect = qs("#director-lighting");
   const compositionSelect = qs("#director-composition");
-  qs("#preview-lighting").textContent = lightingSelect.options[lightingSelect.selectedIndex]?.text || "";
+  qs("#preview-lighting").textContent = findByTag(LIGHTING_GROUPS, state.lighting)?.label || "";
   qs("#preview-composition").textContent = compositionSelect.options[compositionSelect.selectedIndex]?.text || "";
+}
+
+function refreshLightingDisplay() {
+  qs("#director-lighting-current").textContent = findByTag(LIGHTING_GROUPS, state.lighting)?.label || "Naturale morbida";
+}
+function refreshLensDisplay() {
+  qs("#director-lens-current").textContent = state.lens ? findByTag(LENS_GROUPS, state.lens)?.label || "" : "— nessuno —";
+}
+function refreshShotDisplay() {
+  qs("#director-shot-current").textContent = state.shotType ? findByTag(SHOT_GROUPS, state.shotType)?.label || "" : "— nessuna —";
 }
 
 function loadState() {
@@ -395,8 +416,10 @@ export function getFullDirectorState() {
 export function setFullDirectorState(saved) {
   state = { ...DEFAULTS, ...(saved?.settings || {}) };
   applied = { ...EMPTY_APPLIED, ...(saved?.applied || {}) };
-  qs("#director-lighting").value = state.lighting;
   qs("#director-composition").value = state.composition;
+  refreshLightingDisplay();
+  refreshLensDisplay();
+  refreshShotDisplay();
   refreshAllDiagrams();
   renderAppliedList();
   saveState();
@@ -410,6 +433,8 @@ function applyToPrompt() {
     framing: bucketFor(FRAMING_BUCKETS, state.framingBoundaryY).en,
     lighting: state.lighting || null,
     composition: state.composition || null,
+    lens: state.lens || null,
+    shotType: state.shotType || null,
   };
   saveState();
   renderAppliedList();
@@ -422,8 +447,10 @@ export function initDirector() {
   state = loaded.settings;
   applied = loaded.applied;
 
-  qs("#director-lighting").value = state.lighting;
   qs("#director-composition").value = state.composition;
+  refreshLightingDisplay();
+  refreshLensDisplay();
+  refreshShotDisplay();
 
   initTopDownDiagram();
   initElevationDiagram();
@@ -431,10 +458,42 @@ export function initDirector() {
   renderAppliedList();
   updateScenePreview();
 
-  qs("#director-lighting").addEventListener("change", (e) => {
-    state.lighting = e.target.value;
-    saveState();
-    updateScenePreview();
+  qs("#director-lighting-edit-btn").addEventListener("click", () => {
+    openPickerModal({
+      title: "Scegli l'illuminazione",
+      groups: LIGHTING_GROUPS,
+      currentTag: state.lighting,
+      onSelect: (option) => {
+        state.lighting = option.tag;
+        saveState();
+        refreshLightingDisplay();
+        updateScenePreview();
+      },
+    });
+  });
+  qs("#director-lens-edit-btn").addEventListener("click", () => {
+    openPickerModal({
+      title: "Scegli l'obiettivo",
+      groups: [{ title: "—", options: [{ key: "none", label: "— nessuno —", tag: "", description: "Non aggiungere nessuna indicazione sull'obiettivo.", icon: "" }] }, ...LENS_GROUPS],
+      currentTag: state.lens,
+      onSelect: (option) => {
+        state.lens = option.tag || null;
+        saveState();
+        refreshLensDisplay();
+      },
+    });
+  });
+  qs("#director-shot-edit-btn").addEventListener("click", () => {
+    openPickerModal({
+      title: "Scegli l'inquadratura speciale",
+      groups: [{ title: "—", options: [{ key: "none", label: "— nessuna —", tag: "", description: "Usa solo lo zoom/angolo impostato sopra.", icon: "" }] }, ...SHOT_GROUPS],
+      currentTag: state.shotType,
+      onSelect: (option) => {
+        state.shotType = option.tag || null;
+        saveState();
+        refreshShotDisplay();
+      },
+    });
   });
   qs("#director-composition").addEventListener("change", (e) => {
     state.composition = e.target.value;

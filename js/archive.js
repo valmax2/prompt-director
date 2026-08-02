@@ -23,7 +23,10 @@ export async function addArchiveImage(blob, meta = {}) {
     blob,
     prompt: meta.prompt || "",
     workflowName: meta.workflowName || "",
-    private: false,
+    // Newly generated content defaults to hidden/blurred — the user opts
+    // in per-item with the 👁️ toggle instead of everything being public
+    // on the screen by default.
+    private: true,
     active: true,
     createdAt: Date.now(),
   };

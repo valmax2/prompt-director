@@ -146,7 +146,31 @@ export async function copyImageToClipboard(blob) {
   }
 }
 
-export function downloadBlob(blob, filename) {
+// Lets the user pick exactly where a file is saved (folder + name), instead
+// of it always landing wherever the browser's default download location is.
+// Only Chromium-based browsers support the native "Save As" picker
+// (window.showSaveFilePicker); everything else falls back to the classic
+// auto-download, so this never breaks saving anywhere, it just adds a
+// choice where the browser allows it.
+export async function downloadBlob(blob, filename) {
+  if (window.showSaveFilePicker) {
+    try {
+      const dotIndex = filename.lastIndexOf(".");
+      const ext = dotIndex > 0 ? filename.slice(dotIndex) : "";
+      const pickerOptions = { suggestedName: filename };
+      if (blob.type && ext) {
+        pickerOptions.types = [{ description: "File", accept: { [blob.type]: [ext] } }];
+      }
+      const handle = await window.showSaveFilePicker(pickerOptions);
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (err) {
+      if (err?.name === "AbortError") return; // user cancelled the save dialog — nothing more to do
+      // Any other error (e.g. an unsupported type filter): fall through to the classic download below.
+    }
+  }
   const url = URL.createObjectURL(blob);
   const a = el("a", { href: url, download: filename });
   document.body.appendChild(a);

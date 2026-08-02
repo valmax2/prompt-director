@@ -466,3 +466,79 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* --- Big picker modal (lighting / lens / shot type / style) --- */
+
+.picker-modal-overlay[hidden] { display: none; }
+.picker-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 6, 14, 0.78);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.picker-modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(920px, 100%);
+  max-height: min(88vh, 900px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.picker-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.picker-modal-header h3 { margin: 0; }
+.picker-modal-body {
+  overflow-y: auto;
+  padding: 16px 18px 22px;
+}
+.picker-group-title {
+  margin: 18px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.picker-group-title:first-child { margin-top: 0; }
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color .15s, transform .1s;
+}
+.picker-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.picker-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.picker-card-icon { line-height: 0; }
+.picker-card-icon svg { border-radius: 8px; }
+.picker-card-label { font-size: 13px; font-weight: 600; }
+.picker-card-desc { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+.picker-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-dim); }
+.picker-field-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.picker-current-value { color: var(--text); font-weight: 600; font-size: 14px; }
