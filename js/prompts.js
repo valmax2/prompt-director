@@ -431,9 +431,18 @@ function populateCoherentPresetOptions() {
   }
 }
 
+// Frame count/FPS only do anything if the active workflow actually has them
+// mapped — hide the whole "Animazione" section otherwise instead of showing
+// controls that would silently have no effect.
+function updateAnimationSectionVisibility(workflow) {
+  const hasAnimationMapping = !!(workflow?.mapping?.frameCount || workflow?.mapping?.fps);
+  qs("#prompt-animation-section").hidden = !hasAnimationMapping;
+}
+
 async function renderCharacterSlots() {
   const workflow = getGenerationMode() === "external" ? null : await getActiveWorkflow();
   characterSlotDefs = computeCharacterSlotDefs(workflow);
+  updateAnimationSectionVisibility(workflow);
 
   const container = qs("#prompt-character-slots");
   const previousIds = getSelectedCharacterIdsByIndex();

@@ -11,9 +11,10 @@ const STORE = "workflows";
 // class_type: mapping is purely "pick any node + any input field", so it
 // works for today's nodes and future ones without code changes.
 const ROLES = [
-  { key: "seed", label: "Seed", fields: [{ key: "field", defaultField: "seed" }] },
+  { key: "seed", section: "⚙️ Parametri generali", label: "Seed", fields: [{ key: "field", defaultField: "seed" }] },
   {
     key: "resolution",
+    section: "⚙️ Parametri generali",
     label: "Risoluzione (larghezza / altezza, es. nodo EmptyLatentImage)",
     fields: [
       { key: "widthField", defaultField: "width" },
@@ -22,15 +23,29 @@ const ROLES = [
   },
   {
     key: "frameCount",
-    label: "Numero di frame — animazione (es. nodo AnimateDiff/batch)",
+    section: "🎬 Animazione (frame e durata)",
+    label: "Numero di frame (es. nodo AnimateDiff/batch, o \"length\" per WanImageToVideo)",
     fields: [{ key: "field", defaultField: "frame_count" }],
   },
   {
     key: "fps",
-    label: "FPS — animazione (es. nodo VHS_VideoCombine)",
+    section: "🎬 Animazione (frame e durata)",
+    label: "FPS (es. nodo VHS_VideoCombine)",
     fields: [{ key: "field", defaultField: "frame_rate" }],
   },
 ];
+
+// Auto-detected at upload time from the node class_types actually present,
+// purely to sort a workflow into the "immagine" or "animazione/video"
+// section of the Workflow tab — never used to change how mapping/generation
+// behaves, and always correctable by hand via "Sposta in..." if it guesses
+// wrong (e.g. a custom/unnamed video node this pattern doesn't recognize).
+const ANIMATION_CLASS_TYPE_PATTERN = /video|animate|wan\w*image.?to.?video|ltxv|svd|motion/i;
+
+function detectMediaType(json) {
+  const isAnimation = Object.values(json || {}).some((node) => ANIMATION_CLASS_TYPE_PATTERN.test(node?.class_type || ""));
+  return isAnimation ? "animation" : "image";
+}
 
 // Each group renders as an add/remove-able list of {nodeId, field} rows.
 // `legacyKey` migrates the old single-node mapping shape (from before
@@ -190,7 +205,12 @@ function renderMappingPanel(workflow) {
 
   const nodeEntries = Object.entries(workflow.json);
 
+  let lastSection = null;
   for (const role of ROLES) {
+    if (role.section !== lastSection) {
+      fieldsRoot.appendChild(el("div", { class: "step-title full" }, role.section));
+      lastSection = role.section;
+    }
     const current = workflow.mapping?.[role.key] || {};
     const nodeSelect = el("select", { "data-role": role.key, "data-part": "node" }, [
       el("option", { value: "" }, "— non usato —"),
@@ -295,52 +315,80 @@ async function saveMapping() {
   window.dispatchEvent(new CustomEvent("workflow-mapping-updated"));
 }
 
+async function setWorkflowMediaType(workflow, mediaType) {
+  workflow.mediaType = mediaType;
+  await db.put(STORE, workflow);
+  await loadAll();
+  renderList();
+}
+
+function buildWorkflowCard(workflow, isActive) {
+  const nodeCount = Object.keys(workflow.json || {}).length;
+  const mediaType = workflow.mediaType || "image";
+  return el("div", { class: `item-card${isActive ? " active-workflow" : ""}` }, [
+    el("div", { class: "name", text: workflow.name }),
+    el("div", { class: "meta", text: `${nodeCount} nodi · ${formatDate(workflow.createdAt)}` }),
+    el("div", { class: "meta", text: isActive ? "✅ Attivo" : "" }),
+    el("div", { class: "row" }, [
+      el("button", {
+        class: "btn small",
+        type: "button",
+        onclick: () => {
+          setActiveWorkflowId(workflow.id);
+          renderList();
+          toast(`"${workflow.name}" impostato come workflow attivo.`, "success");
+        },
+      }, isActive ? "Attivo" : "Seleziona"),
+      el("button", {
+        class: "btn small",
+        type: "button",
+        onclick: () => renderMappingPanel(workflow),
+      }, "Mappa nodi"),
+      el("button", {
+        class: "btn small",
+        type: "button",
+        title: "Scarica il file .json del workflow per aprirlo/modificarlo (es. in ComfyUI o in un editor di testo)",
+        onclick: () => downloadWorkflow(workflow),
+      }, "📂 Apri (scarica)"),
+    ]),
+    el("div", { class: "row" }, [
+      el("button", {
+        class: "btn small",
+        type: "button",
+        title: "Correggi il tipo se rilevato automaticamente in modo sbagliato",
+        onclick: () => setWorkflowMediaType(workflow, mediaType === "animation" ? "image" : "animation"),
+      }, mediaType === "animation" ? "🖼️ Sposta in Immagine" : "🎬 Sposta in Animazione"),
+      el("button", {
+        class: "btn small danger",
+        type: "button",
+        onclick: () => removeWorkflow(workflow.id),
+      }, "Elimina"),
+    ]),
+  ]);
+}
+
 function renderList() {
-  const root = qs("#workflow-list");
-  root.innerHTML = "";
+  const imageRoot = qs("#workflow-list-image");
+  const animationRoot = qs("#workflow-list-animation");
+  imageRoot.innerHTML = "";
+  animationRoot.innerHTML = "";
   const activeId = getActiveWorkflowId();
 
-  if (cache.length === 0) {
-    root.appendChild(el("p", { class: "hint" }, "Nessun workflow caricato."));
-    return;
+  const imageWorkflows = cache.filter((w) => (w.mediaType || "image") !== "animation");
+  const animationWorkflows = cache.filter((w) => w.mediaType === "animation");
+
+  if (imageWorkflows.length === 0) {
+    imageRoot.appendChild(el("p", { class: "hint" }, "Nessun flusso immagine caricato."));
+  }
+  for (const workflow of imageWorkflows) {
+    imageRoot.appendChild(buildWorkflowCard(workflow, workflow.id === activeId));
   }
 
-  for (const workflow of cache) {
-    const isActive = workflow.id === activeId;
-    const nodeCount = Object.keys(workflow.json || {}).length;
-    const card = el("div", { class: `item-card${isActive ? " active-workflow" : ""}` }, [
-      el("div", { class: "name", text: workflow.name }),
-      el("div", { class: "meta", text: `${nodeCount} nodi · ${formatDate(workflow.createdAt)}` }),
-      el("div", { class: "meta", text: isActive ? "✅ Attivo" : "" }),
-      el("div", { class: "row" }, [
-        el("button", {
-          class: "btn small",
-          type: "button",
-          onclick: () => {
-            setActiveWorkflowId(workflow.id);
-            renderList();
-            toast(`"${workflow.name}" impostato come workflow attivo.`, "success");
-          },
-        }, isActive ? "Attivo" : "Seleziona"),
-        el("button", {
-          class: "btn small",
-          type: "button",
-          onclick: () => renderMappingPanel(workflow),
-        }, "Mappa nodi"),
-        el("button", {
-          class: "btn small",
-          type: "button",
-          title: "Scarica il file .json del workflow per aprirlo/modificarlo (es. in ComfyUI o in un editor di testo)",
-          onclick: () => downloadWorkflow(workflow),
-        }, "📂 Apri (scarica)"),
-        el("button", {
-          class: "btn small danger",
-          type: "button",
-          onclick: () => removeWorkflow(workflow.id),
-        }, "Elimina"),
-      ]),
-    ]);
-    root.appendChild(card);
+  if (animationWorkflows.length === 0) {
+    animationRoot.appendChild(el("p", { class: "hint" }, "Nessun flusso animazione/video caricato."));
+  }
+  for (const workflow of animationWorkflows) {
+    animationRoot.appendChild(buildWorkflowCard(workflow, workflow.id === activeId));
   }
 }
 
@@ -383,10 +431,14 @@ async function handleUpload(fileList) {
         name: file.name.replace(/\.json$/i, ""),
         json,
         mapping: {},
+        mediaType: detectMediaType(json),
         createdAt: Date.now(),
       };
       await db.put(STORE, record);
-      toast(`Workflow "${record.name}" caricato.`, "success");
+      toast(
+        `Workflow "${record.name}" caricato (rilevato come ${record.mediaType === "animation" ? "animazione/video" : "immagine"}).`,
+        "success"
+      );
     } catch (err) {
       toast(`${file.name}: errore nel parsing JSON (${err.message}).`, "error");
     }

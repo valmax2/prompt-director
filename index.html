@@ -148,8 +148,15 @@
         <input type="file" id="workflow-upload" accept="application/json,.json" multiple hidden>
         <span>📄 Carica workflow (.json)</span>
       </label>
+      <p class="hint small">Il tipo (immagine o animazione/video) viene rilevato automaticamente dai nodi del workflow; puoi correggerlo a mano su ogni scheda con "Sposta in..." se serve.</p>
     </div>
-    <div id="workflow-list" class="card-grid"></div>
+
+    <h3 class="step-title">🖼️ Flussi immagine</h3>
+    <div id="workflow-list-image" class="card-grid"></div>
+
+    <h3 class="step-title">🎬 Flussi animazione / video</h3>
+    <p class="hint">Qui puoi mappare anche numero di frame e FPS (durata dell'animazione) per ogni flusso, dal pannello "Mappa nodi".</p>
+    <div id="workflow-list-animation" class="card-grid"></div>
 
     <div id="workflow-mapping" class="card" hidden>
       <h3>Mappatura nodi — <span id="mapping-workflow-name"></span></h3>
@@ -261,14 +268,18 @@
         </select>
         <span class="hint small">Aggiunge un'indicazione al prompt e, se hai mappato un nodo "Risoluzione" nel Workflow, imposta anche larghezza/altezza reali.</span>
       </label>
-      <label>Numero di frame (animazione, facoltativo)
-        <input type="number" id="prompt-frame-count" min="1" step="1" placeholder="es. 16">
-        <span class="hint small">Solo per workflow di animazione con un nodo "Numero di frame" mappato nel Workflow.</span>
-      </label>
-      <label>FPS (animazione, facoltativo)
-        <input type="number" id="prompt-fps" min="1" step="1" placeholder="es. 8">
-        <span class="hint small" id="prompt-duration-hint"></span>
-      </label>
+      <div class="full animation-section" id="prompt-animation-section" hidden>
+        <h4 class="step-title">🎬 Animazione</h4>
+        <div class="form-grid">
+          <label>Numero di frame
+            <input type="number" id="prompt-frame-count" min="1" step="1" placeholder="es. 16">
+          </label>
+          <label>FPS
+            <input type="number" id="prompt-fps" min="1" step="1" placeholder="es. 8">
+            <span class="hint small" id="prompt-duration-hint"></span>
+          </label>
+        </div>
+      </div>
       <label class="full">Qualità / dettaglio (facoltativo, seleziona quanti vuoi)
         <div class="checkbox-group" id="prompt-quality-options">
           <label class="checkbox-inline"><input type="checkbox" value="high resolution, ultra high definition"> Alta risoluzione</label>

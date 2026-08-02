@@ -195,6 +195,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .checkbox-inline { flex-direction: row !important; align-items: center; gap: 6px !important; font-size: 13px; width: auto !important; }
 .checkbox-inline input[type="checkbox"] { width: auto; }
 
+.animation-section { border: 1px dashed var(--border); border-radius: var(--radius); padding: 12px; }
+.animation-section .step-title { margin: 0 0 10px; }
+
 .identity-row { align-items: center; }
 .identity-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 50%; border: 1px solid var(--border); }
 
