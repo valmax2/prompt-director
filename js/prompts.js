@@ -5,7 +5,7 @@ import { getActiveWorkflow } from "./workflows.js";
 import { getConnectionSettings, getGenerationMode, getActiveProvider, getProviderSettings, onStateChange } from "./state.js";
 import { ComfyUIClient, ComfyUIError } from "./comfyui.js";
 import { addArchiveImage, refreshArchive } from "./archive.js";
-import { getAppliedDirectorTags } from "./director.js";
+import { getAppliedDirectorTags, setFullDirectorState } from "./director.js";
 import { generateImageExternal, getProviderMeta, ProviderError } from "./providers.js";
 import { initVoiceDictation } from "./voice.js";
 import { COHERENT_MODE_PRESETS, buildConsistencyBlock } from "./consistency.js";
@@ -156,6 +156,40 @@ function restoreDraft() {
   lastCharacterDescEn = draft.lastCharacterDescEn || "";
 
   setSelectedCharacterIdsByIndex(draftCharacterIdsByIndex(draft));
+}
+
+// Wipes every field of the "Crea Scena" flow (character selection, scene
+// text, camera/director settings, generated prompt) back to a blank slate,
+// including the persisted draft — so starting a new prompt never carries
+// over leftovers from the previous one. Saved characters/workflows/scenes
+// themselves are untouched, only the current in-progress draft.
+function resetPromptForm() {
+  qs("#prompt-input-it").value = "";
+  qs("#prompt-input-neg-it").value = "";
+  qs("#prompt-character-desc-it").value = "";
+  setSelectedStyle("");
+  setQualityTags([]);
+  qs("#prompt-aspect-ratio").value = "";
+  qs("#prompt-frame-count").value = "";
+  qs("#prompt-fps").value = "";
+  updateDurationHint();
+  qs("#prompt-coherent-mode-toggle").checked = false;
+  qs("#prompt-coherent-preset").selectedIndex = 0;
+  setStrengths({ identity: 0.7, character: 0.7, pose: 0.7, faceCoherence: 0.7, costumeCoherence: 0.7, sceneFreedom: 0.6 });
+  poseFile = null;
+  qs("#prompt-pose-upload").value = "";
+  renderPosePreview();
+  setSelectedCharacterIdsByIndex({});
+  lastSceneEn = null;
+  lastNegAdditionEn = "";
+  lastCharacterDescEn = "";
+  qs("#prompt-output-en").value = "";
+  qs("#prompt-output-neg-en").value = DEFAULT_NEGATIVE_EN;
+  qs("#prompt-view-archive-btn").hidden = true;
+  setSendStatus("");
+  setFullDirectorState({});
+  saveDraft();
+  toast("Nuovo prompt: tutti i campi sono stati svuotati.", "info");
 }
 
 // --- Full prompt state (used by the saved-scenes archive) ---
@@ -853,6 +887,7 @@ export async function initPrompts() {
   updateModeIndicator();
 
   qs("#prompt-translate-btn").addEventListener("click", handleTranslate);
+  qs("#prompt-reset-btn").addEventListener("click", resetPromptForm);
   qs("#prompt-copy-btn").addEventListener("click", () => handleCopy("prompt-output-en", "Prompt"));
   qs("#prompt-copy-neg-btn").addEventListener("click", () => handleCopy("prompt-output-neg-en", "Prompt negativo"));
   qs("#prompt-send-btn").addEventListener("click", handleSend);
