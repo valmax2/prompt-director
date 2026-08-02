@@ -207,6 +207,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 
 .pose-preview-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 
+.char-slot-preview:empty { display: none; }
+.char-slot-preview { margin-top: 8px; width: 96px; }
+.char-slot-preview img, .char-slot-preview video { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); background: #0b0e1c; display: block; }
+
 .mapping-summary-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
 .mapping-summary-table th, .mapping-summary-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); }
 .mapping-summary-table th { color: var(--text-dim); font-weight: 600; }

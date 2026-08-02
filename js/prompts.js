@@ -1,6 +1,6 @@
-import { qs, qsa, el, toast, copyToClipboard, uid } from "./utils.js";
+import { qs, qsa, el, toast, copyToClipboard, uid, thumbWithPrivacyToggle } from "./utils.js";
 import { translateItToEn, optimizePrompt, tagify, DEFAULT_NEGATIVE_EN } from "./translate.js";
-import { listCharacters, getCharacterById } from "./characters.js";
+import { listCharacters, getCharacterById, setCharacterVisibility } from "./characters.js";
 import { getActiveWorkflow } from "./workflows.js";
 import { getConnectionSettings, getGenerationMode, getActiveProvider, getProviderSettings, onStateChange } from "./state.js";
 import { ComfyUIClient, ComfyUIError } from "./comfyui.js";
@@ -327,6 +327,8 @@ function setSelectedCharacterIdsByIndex(idsByIndex) {
   qsa("select[data-slot-index]", qs("#prompt-character-slots")).forEach((select) => {
     const id = idsByIndex?.[Number(select.dataset.slotIndex)] || "";
     select.value = id && [...select.options].some((o) => o.value === id) ? id : "";
+    const previewDiv = select.closest("label")?.querySelector(".char-slot-preview");
+    if (previewDiv) renderCharacterSlotPreview(previewDiv, select.value);
   });
   updateCharacterHint();
   renderMappingSummary();
@@ -373,6 +375,21 @@ function updateCharacterHint() {
     hint.textContent = "Carica un personaggio nella scheda 'Personaggi' per mantenerne l'aspetto coerente nelle immagini generate.";
     hint.className = "status-box full";
   }
+}
+
+// Small thumbnail next to a character-slot picker so it's clear at a glance
+// which saved character is about to be used, without leaving "Crea Scena" —
+// reuses the same blurred/eye-toggle privacy control as the character grid,
+// and toggling it here updates the character's saved visibility everywhere.
+function renderCharacterSlotPreview(container, characterId) {
+  container.innerHTML = "";
+  const character = listCharacters().find((c) => c.id === characterId);
+  if (!character) return;
+  const url = URL.createObjectURL(character.blob);
+  const isHidden = character.visible === false;
+  container.appendChild(
+    thumbWithPrivacyToggle(url, character.name, isHidden, () => setCharacterVisibility(character.id, isHidden))
+  );
 }
 
 function renderPosePreview() {
@@ -513,6 +530,7 @@ async function renderCharacterSlots() {
       );
       return;
     }
+    const previewDiv = el("div", { class: "char-slot-preview" });
     const select = el(
       "select",
       {
@@ -521,6 +539,7 @@ async function renderCharacterSlots() {
           updateCharacterHint();
           renderMappingSummary();
           saveDraft();
+          renderCharacterSlotPreview(previewDiv, select.value);
         },
       },
       [el("option", { value: "" }, "— nessuno —"), ...listCharacters().map((c) => el("option", { value: c.id }, c.name))]
@@ -533,7 +552,8 @@ async function renderCharacterSlots() {
       // recently added character instead of silently generating with none.
       select.value = listCharacters()[0].id;
     }
-    container.appendChild(el("label", { class: "full" }, [slot.label, select]));
+    renderCharacterSlotPreview(previewDiv, select.value);
+    container.appendChild(el("label", { class: "full" }, [slot.label, select, previewDiv]));
   });
 
   updateCharacterHint();

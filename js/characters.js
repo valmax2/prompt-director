@@ -44,6 +44,20 @@ async function removeCharacterIdentityBlob(character) {
   notifyUpdated();
 }
 
+// Shared by the character grid's own eye-toggle and the small preview shown
+// next to the character picker in "Crea Scena", so revealing/hiding a
+// character reads the same everywhere instead of each place keeping its own
+// copy of the visibility flag.
+export async function setCharacterVisibility(id, visible) {
+  const character = cache.find((c) => c.id === id);
+  if (!character) return;
+  character.visible = visible;
+  await db.put(STORE, character);
+  await loadAll();
+  renderGrid();
+  notifyUpdated();
+}
+
 function renderGrid() {
   const root = qs("#character-grid");
   root.innerHTML = "";
@@ -59,11 +73,7 @@ function renderGrid() {
     const isHidden = character.visible === false;
 
     const card = el("div", { class: "item-card" }, [
-      thumbWithPrivacyToggle(url, character.name, isHidden, async () => {
-        character.visible = isHidden ? true : false;
-        await db.put(STORE, character);
-        renderGrid();
-      }),
+      thumbWithPrivacyToggle(url, character.name, isHidden, () => setCharacterVisibility(character.id, isHidden)),
       nameDisplay,
       el("div", { class: "meta", text: `${formatBytes(character.blob.size)} · ${formatDate(character.createdAt)}` }),
       el("div", { class: "row" }, [
