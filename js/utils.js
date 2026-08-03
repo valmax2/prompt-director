@@ -37,6 +37,26 @@ export function isVideoFilename(filename) {
   return VIDEO_EXTENSIONS.has(fileExtension(filename));
 }
 
+// Object URLs from URL.createObjectURL() stay alive (and keep their backing
+// Blob's memory pinned) until explicitly revoked — a plain "wipe innerHTML
+// and rebuild" render that creates a fresh URL per item every time leaks the
+// previous render's URLs forever. This tracks everything handed out since
+// the last reset() so a full-grid re-render can free them all in one call.
+export function createObjectUrlTracker() {
+  let urls = [];
+  return {
+    create(blob) {
+      const url = URL.createObjectURL(blob);
+      urls.push(url);
+      return url;
+    },
+    reset() {
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls = [];
+    },
+  };
+}
+
 export function thumbWithPrivacyToggle(url, alt, isHidden, onToggle, isVideo = false) {
   const media = isVideo
     ? el("video", { src: url, class: isHidden ? "blurred" : "", controls: true, muted: true, loop: true, playsinline: true })

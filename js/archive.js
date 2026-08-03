@@ -1,9 +1,12 @@
 import { db } from "./db.js";
-import { qs, el, uid, toast, formatBytes, formatDate, downloadBlob, sanitizeFilename, thumbWithPrivacyToggle, fileExtension, isVideoFilename } from "./utils.js";
+import { qs, el, uid, toast, formatBytes, formatDate, downloadBlob, sanitizeFilename, thumbWithPrivacyToggle, fileExtension, isVideoFilename, createObjectUrlTracker } from "./utils.js";
 
 const STORE = "images";
 
 let cache = [];
+// Same leak risk as characters.js: renderGrid() rebuilds the whole grid on
+// every generation, filter change, or privacy/active toggle.
+const gridUrls = createObjectUrlTracker();
 
 async function loadAll() {
   cache = await db.getAll(STORE);
@@ -59,6 +62,7 @@ async function removeImage(id) {
 
 function renderGrid() {
   const root = qs("#archive-grid");
+  gridUrls.reset();
   root.innerHTML = "";
   const visible = cache.filter(matchesFilters);
 
@@ -68,7 +72,7 @@ function renderGrid() {
   }
 
   for (const record of visible) {
-    const url = URL.createObjectURL(record.blob);
+    const url = gridUrls.create(record.blob);
     const isVideo = isVideoFilename(record.filename);
     const card = el("div", { class: "item-card" }, [
       thumbWithPrivacyToggle(url, record.name, !!record.private, () => toggleField(record, "private"), isVideo),

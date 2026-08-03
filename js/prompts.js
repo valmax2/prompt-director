@@ -381,22 +381,37 @@ function updateCharacterHint() {
 // which saved character is about to be used, without leaving "Crea Scena" —
 // reuses the same blurred/eye-toggle privacy control as the character grid,
 // and toggling it here updates the character's saved visibility everywhere.
+// One tracked object URL per slot's own container (not a shared tracker):
+// several slots can be on screen at once, and re-rendering one slot must
+// never revoke a URL a different, unchanged slot is still displaying.
 function renderCharacterSlotPreview(container, characterId) {
+  if (container._objectUrl) {
+    URL.revokeObjectURL(container._objectUrl);
+    container._objectUrl = null;
+  }
   container.innerHTML = "";
   const character = listCharacters().find((c) => c.id === characterId);
   if (!character) return;
   const url = URL.createObjectURL(character.blob);
+  container._objectUrl = url;
   const isHidden = character.visible === false;
   container.appendChild(
     thumbWithPrivacyToggle(url, character.name, isHidden, () => setCharacterVisibility(character.id, isHidden))
   );
 }
 
+let posePreviewUrl = null;
+
 function renderPosePreview() {
+  if (posePreviewUrl) {
+    URL.revokeObjectURL(posePreviewUrl);
+    posePreviewUrl = null;
+  }
   const root = qs("#prompt-pose-preview");
   root.innerHTML = "";
   if (!poseFile) return;
   const url = URL.createObjectURL(poseFile);
+  posePreviewUrl = url;
   root.appendChild(
     el("div", { class: "row" }, [
       el("img", { src: url, alt: "Posa", class: "pose-preview-thumb" }),

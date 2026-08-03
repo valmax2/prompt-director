@@ -1,10 +1,14 @@
 import { db } from "./db.js";
-import { qs, el, uid, toast, formatBytes, formatDate, sanitizeFilename, thumbWithPrivacyToggle, copyImageToClipboard, downloadBlob } from "./utils.js";
+import { qs, el, uid, toast, formatBytes, formatDate, sanitizeFilename, thumbWithPrivacyToggle, copyImageToClipboard, downloadBlob, createObjectUrlTracker } from "./utils.js";
 
 const STORE = "characters";
 const MAX_SIZE = 15 * 1024 * 1024; // 15MB per image, generous but bounded
 
 let cache = [];
+// renderGrid() fully rebuilds the grid on every small change (toggle, rename,
+// add, remove) — without this, each rebuild would leak the previous
+// render's object URLs since nothing else ever revokes them.
+const gridUrls = createObjectUrlTracker();
 
 function notifyUpdated() {
   window.dispatchEvent(new CustomEvent("characters-updated", { detail: cache }));
@@ -60,6 +64,7 @@ export async function setCharacterVisibility(id, visible) {
 
 function renderGrid() {
   const root = qs("#character-grid");
+  gridUrls.reset();
   root.innerHTML = "";
 
   if (cache.length === 0) {
@@ -68,7 +73,7 @@ function renderGrid() {
   }
 
   for (const character of cache) {
-    const url = URL.createObjectURL(character.blob);
+    const url = gridUrls.create(character.blob);
     const nameDisplay = el("div", { class: "name", text: character.name });
     const isHidden = character.visible === false;
 
@@ -118,7 +123,7 @@ function renderGrid() {
 // to feed a dedicated identity node without touching the body/costume node.
 function renderIdentityRow(character) {
   if (character.identityBlob) {
-    const url = URL.createObjectURL(character.identityBlob);
+    const url = gridUrls.create(character.identityBlob);
     return el("div", { class: "row identity-row" }, [
       el("img", { src: url, alt: "Volto", class: "identity-thumb" }),
       el("span", { class: "hint small" }, "Foto identità (volto)"),
