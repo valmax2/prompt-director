@@ -535,6 +535,36 @@ async function handleUpload(fileList) {
   }
   await loadAll();
   renderList();
+  window.dispatchEvent(new CustomEvent("workflows-updated"));
+}
+
+// --- Google Drive backup support (see backup.js) ---
+
+export function listWorkflowsForSync() {
+  return cache.map((w) => ({ id: w.id, name: w.name, json: w.json, driveFileId: w.driveFileId || null }));
+}
+
+export async function markWorkflowDriveId(id, driveFileId) {
+  const workflow = cache.find((w) => w.id === id);
+  if (!workflow) return;
+  workflow.driveFileId = driveFileId;
+  await db.put(STORE, workflow);
+}
+
+export async function restoreWorkflowFromDrive(name, json, driveFileId) {
+  const record = {
+    id: uid(),
+    name,
+    json,
+    mapping: {},
+    mediaType: detectMediaType(json),
+    driveFileId,
+    createdAt: Date.now(),
+  };
+  await db.put(STORE, record);
+  await loadAll();
+  renderList();
+  return record;
 }
 
 export async function initWorkflows() {

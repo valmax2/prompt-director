@@ -11,6 +11,7 @@ import { initScenes } from "./scenes.js";
 import { APP_VERSION, APP_VERSION_LABEL, APP_VERSION_NOTES } from "./version.js";
 import { initPickerModal } from "./picker-modal.js";
 import { initModelInventory } from "./models.js";
+import { initBackup } from "./backup.js";
 
 function switchTab(tabId) {
   qsa(".tab-btn").forEach((btn) => {
@@ -140,6 +141,7 @@ async function init() {
   initDirector();
   initScenes();
   await initArchive();
+  initBackup();
 }
 
 init().catch((err) => {

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Comic Studio · ComfyUI</title>
 <link rel="stylesheet" href="css/styles.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <div id="toast-root" class="toast-root" aria-live="polite"></div>
@@ -46,6 +47,7 @@
   <button class="tab-btn" data-tab="tab-characters" role="tab" aria-selected="false">Personaggi</button>
   <button class="tab-btn" data-tab="tab-prompt" role="tab" aria-selected="false">Crea Scena</button>
   <button class="tab-btn" data-tab="tab-archive" role="tab" aria-selected="false">Archivio</button>
+  <button class="tab-btn" data-tab="tab-backup" role="tab" aria-selected="false">☁️ Backup</button>
 </nav>
 
 <main class="tab-panels">
@@ -486,6 +488,23 @@
       <label class="checkbox-row"><input type="checkbox" id="archive-filter-private"> Solo private</label>
     </div>
     <div id="archive-grid" class="card-grid"></div>
+  </section>
+
+  <!-- BACKUP -->
+  <section id="tab-backup" class="tab-panel">
+    <h2>☁️ Backup su Google Drive</h2>
+    <p class="hint">Collega il tuo Google Drive per salvare automaticamente personaggi, flussi e immagini generate, e recuperarli da qualsiasi dispositivo (PC o cellulare) che apre questa stessa pagina con lo stesso account Google.</p>
+    <p class="hint">I file vengono salvati in una cartella dedicata "Comic Studio" nel tuo Drive: l'app non vede né tocca il resto dei tuoi file.</p>
+    <div class="card">
+      <p class="status-box" id="backup-account">Non connesso.</p>
+      <div class="form-actions">
+        <button type="button" id="backup-connect-btn" class="btn primary">🔗 Collega Google Drive</button>
+        <button type="button" id="backup-disconnect-btn" class="btn ghost" hidden>Scollega</button>
+        <button type="button" id="backup-sync-btn" class="btn success" disabled>🔄 Sincronizza ora</button>
+      </div>
+      <p class="hint small">La sincronizzazione automatica parte da sola in background dopo ogni nuovo personaggio, flusso o immagine, se sei connesso. "Sincronizza ora" forza subito un controllo completo — utile appena apri l'app su un altro dispositivo, per scaricare quanto salvato altrove.</p>
+      <p class="status-box" id="backup-status"></p>
+    </div>
   </section>
 
 </main>

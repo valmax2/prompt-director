@@ -181,6 +181,37 @@ async function removeCharacter(id) {
   toast("Personaggio eliminato.", "info");
 }
 
+// --- Google Drive backup support (see backup.js) ---
+// Kept here rather than in backup.js so the "characters" store stays this
+// module's own concern; backup.js only sees this narrow surface.
+
+export function listCharactersForSync() {
+  return cache.map((c) => ({ id: c.id, name: c.name, blob: c.blob, driveFileId: c.driveFileId || null }));
+}
+
+export async function markCharacterDriveId(id, driveFileId) {
+  const character = cache.find((c) => c.id === id);
+  if (!character) return;
+  character.driveFileId = driveFileId;
+  await db.put(STORE, character);
+}
+
+export async function restoreCharacterFromDrive(name, blob, driveFileId) {
+  const record = {
+    id: uid(),
+    name: sanitizeFilename(name.replace(/\.[^/.]+$/, "")),
+    blob,
+    visible: false,
+    driveFileId,
+    createdAt: Date.now(),
+  };
+  await db.put(STORE, record);
+  await loadAll();
+  renderGrid();
+  notifyUpdated();
+  return record;
+}
+
 export async function addCharacterFromBlob(blob, name, visible = true) {
   const record = {
     id: uid(),

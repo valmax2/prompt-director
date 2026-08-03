@@ -36,6 +36,39 @@ export async function addArchiveImage(blob, meta = {}) {
   await db.put(STORE, record);
   await loadAll();
   renderGrid();
+  window.dispatchEvent(new CustomEvent("archive-updated"));
+  return record;
+}
+
+// --- Google Drive backup support (see backup.js) ---
+
+export function listArchiveForSync() {
+  return cache.map((r) => ({ id: r.id, name: r.name, blob: r.blob, driveFileId: r.driveFileId || null }));
+}
+
+export async function markArchiveDriveId(id, driveFileId) {
+  const record = cache.find((r) => r.id === id);
+  if (!record) return;
+  record.driveFileId = driveFileId;
+  await db.put(STORE, record);
+}
+
+export async function restoreArchiveFromDrive(name, blob, driveFileId) {
+  const record = {
+    id: uid(),
+    name: name.replace(/\.[^/.]+$/, ""),
+    filename: name,
+    blob,
+    prompt: "",
+    workflowName: "Ripristinato da Google Drive",
+    private: true,
+    active: true,
+    driveFileId,
+    createdAt: Date.now(),
+  };
+  await db.put(STORE, record);
+  await loadAll();
+  renderGrid();
   return record;
 }
 
