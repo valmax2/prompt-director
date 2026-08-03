@@ -1,7 +1,7 @@
 import { db } from "./db.js";
 import { qs, el, uid, toast, formatDate, downloadBlob, sanitizeFilename } from "./utils.js";
 import { getActiveWorkflowId, setActiveWorkflowId, getConnectionSettings } from "./state.js";
-import { isModelFilename, categorizeModelsForField, loadModelInventory, extractComboOptions } from "./models.js";
+import { isModelFilename, categorizeModelsForField, loadModelInventory, extractComboOptions, guessModelFamily } from "./models.js";
 import { ComfyUIClient } from "./comfyui.js";
 
 const STORE = "workflows";
@@ -360,6 +360,30 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
       el("p", { class: "hint full" }, "Nessun campo con un nome di file modello (.safetensors, .ckpt, .pt, .pth, .bin, .onnx, .gguf) trovato in questo flusso.")
     );
     return;
+  }
+
+  // Best-effort cross-check: everything in one pipeline (checkpoint, VAE,
+  // text encoder, LoRA, ControlNet) has to be the same base-model family
+  // (SDXL, Flux, SD1.5...) to actually work together — ComfyUI's own
+  // per-field validation never catches this (a file just has to exist in
+  // the right folder), so it's flagged here instead, from the filenames
+  // currently set on this workflow's model fields.
+  const familiesInUse = new Map(); // family -> [filenames]
+  for (const field of fields) {
+    const family = guessModelFamily(field.currentValue);
+    if (!family) continue;
+    if (!familiesInUse.has(family)) familiesInUse.set(family, []);
+    familiesInUse.get(family).push(field.currentValue);
+  }
+  if (familiesInUse.size > 1) {
+    const summary = [...familiesInUse.entries()].map(([family, files]) => `${family} (${files.join(", ")})`).join(" · ");
+    root.appendChild(
+      el(
+        "p",
+        { class: "hint full error" },
+        `⚠️ Questo flusso sembra mischiare famiglie di modelli diverse, a giudicare dai nomi dei file: ${summary}. Se non è voluto, è una causa comune di errori o immagini rotte — checkpoint, VAE, text encoder, LoRA e ControlNet devono di solito appartenere tutti alla stessa famiglia.`
+      )
+    );
   }
 
   const { entries: inventory } = loadModelInventory();

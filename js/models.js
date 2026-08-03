@@ -12,6 +12,40 @@ export function isModelFilename(value) {
   return typeof value === "string" && MODEL_FILE_EXTENSIONS.test(value);
 }
 
+// A checkpoint, VAE, text encoder, LoRA and ControlNet all have to belong to
+// the SAME base-model family (SDXL, Flux, SD1.5, Qwen-Image, LTX-Video...)
+// to actually work together — ComfyUI itself never checks this (a file just
+// has to exist in the right folder), so mixing families silently produces
+// either a crash deeper in the pipeline or a broken image, not the
+// "value not in list" error the folder/format checks above catch. Guessed
+// from the filename only — best-effort, not a guarantee, but catches the
+// common case (model names are almost always self-descriptive) without
+// needing to read file contents or call out to the internet.
+// No \b word-boundary around the family token itself: real filenames butt
+// version numbers straight up against it with no separator ("flux1-dev",
+// "sdxl_lightning"), which \b would refuse to match since digits/letters
+// are both "word" characters with no boundary between them.
+const FAMILY_HINTS = [
+  { pattern: /flux/i, family: "Flux" },
+  { pattern: /sd[-_]?3\.?5/i, family: "SD3.5" },
+  { pattern: /sd[-_]?xl|sdxl/i, family: "SDXL" },
+  { pattern: /sd[-_]?3(?!\.?5)/i, family: "SD3" },
+  { pattern: /pony/i, family: "Pony (SDXL)" },
+  { pattern: /qwen/i, family: "Qwen-Image" },
+  { pattern: /hunyuan/i, family: "HunyuanVideo" },
+  { pattern: /ltx/i, family: "LTX-Video" },
+  { pattern: /\bwan\d/i, family: "Wan" },
+  { pattern: /sd[-_]?2\.?1/i, family: "SD2.1" },
+  { pattern: /sd[-_]?1\.?5|v1-5/i, family: "SD1.5" },
+];
+
+export function guessModelFamily(filename) {
+  for (const hint of FAMILY_HINTS) {
+    if (hint.pattern.test(filename || "")) return hint.family;
+  }
+  return null; // no recognizable family in the name — never flagged as a mismatch
+}
+
 // Which inventory categories a node/field is expected to draw from, guessed
 // from the node's class_type first (most reliable) and the field name
 // second — e.g. a "LoraLoader" class or a field literally called
