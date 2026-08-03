@@ -427,7 +427,13 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
 
     const select = el(
       "select",
-      { onchange: () => setModelField(workflow, field, select.value) },
+      {
+        onchange: async () => {
+          await setModelField(workflow, field, select.value);
+          field.currentValue = select.value;
+          renderModelFieldRows(workflow, fields, liveOptionsByField);
+        },
+      },
       [el("option", { value: field.currentValue, selected: "selected" }, `(attuale) ${field.currentValue}`), ...optgroups]
     );
 
@@ -447,6 +453,30 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
         )
       );
     }
+
+    // Only workflows uploaded after this feature shipped carry an
+    // originalJson snapshot — older ones simply never show this button,
+    // rather than pretending to know a value that was never recorded.
+    const originalValue = workflow.originalJson?.[field.nodeId]?.inputs?.[field.fieldKey];
+    if (originalValue !== undefined && originalValue !== field.currentValue) {
+      labelChildren.push(
+        el(
+          "button",
+          {
+            type: "button",
+            class: "btn small ghost",
+            title: "Riporta questo campo esattamente al valore che aveva quando il flusso è stato caricato",
+            onclick: async () => {
+              await setModelField(workflow, field, originalValue);
+              field.currentValue = originalValue;
+              renderModelFieldRows(workflow, fields, liveOptionsByField);
+            },
+          },
+          `↩️ Ripristina originale (${originalValue})`
+        )
+      );
+    }
+
     root.appendChild(el("label", { class: "full" }, labelChildren));
   }
 }
@@ -633,6 +663,11 @@ async function handleUpload(fileList) {
         id: uid(),
         name: file.name.replace(/\.json$/i, ""),
         json,
+        // Untouched snapshot of exactly what was imported, kept forever —
+        // lets the "🧩 Modelli" panel offer a "ripristina originale" per
+        // field even after several model swaps, without the user needing
+        // to remember what the file was originally called.
+        originalJson: JSON.parse(JSON.stringify(json)),
         mapping: {},
         mediaType: detectMediaType(json),
         createdAt: Date.now(),
@@ -669,6 +704,7 @@ export async function restoreWorkflowFromDrive(name, json, driveFileId) {
     id: uid(),
     name,
     json,
+    originalJson: JSON.parse(JSON.stringify(json)),
     mapping: {},
     mediaType: detectMediaType(json),
     driveFileId,
