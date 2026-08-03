@@ -171,6 +171,20 @@ export function clearModelInventory() {
 // expected to draw from, yellow = everything else (untested — ComfyUI
 // itself doesn't enforce that a node's input value lives in any particular
 // models/ subfolder, so a yellow pick can still work, just isn't confirmed).
+// Pulls the exact list of valid values ComfyUI's own /object_info reports
+// for a combo/dropdown input — the authoritative source when ComfyUI is
+// reachable, since it's exactly what that server will accept right now
+// (correct folder AND format AND actually present on disk), sidestepping
+// every way the local-inventory heuristic below can be wrong. Returns null
+// when the field isn't a combo input (e.g. a plain STRING/INT type) or the
+// node/field isn't present in the response at all.
+export function extractComboOptions(objectInfo, classType, fieldKey) {
+  const nodeInfo = objectInfo?.[classType];
+  const fieldDef = nodeInfo?.input?.required?.[fieldKey] || nodeInfo?.input?.optional?.[fieldKey];
+  const optionsSpec = fieldDef?.[0];
+  return Array.isArray(optionsSpec) ? optionsSpec : null;
+}
+
 // GGUF is a different (quantized/compressed) file format, not just another
 // folder — the plain built-in loaders (UNETLoader, CheckpointLoaderSimple,
 // LoraLoader, VAELoader...) genuinely cannot read it, only a class_type

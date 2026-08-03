@@ -1,7 +1,8 @@
 import { db } from "./db.js";
 import { qs, el, uid, toast, formatDate, downloadBlob, sanitizeFilename } from "./utils.js";
-import { getActiveWorkflowId, setActiveWorkflowId } from "./state.js";
-import { isModelFilename, categorizeModelsForField, loadModelInventory } from "./models.js";
+import { getActiveWorkflowId, setActiveWorkflowId, getConnectionSettings } from "./state.js";
+import { isModelFilename, categorizeModelsForField, loadModelInventory, extractComboOptions } from "./models.js";
+import { ComfyUIClient } from "./comfyui.js";
 
 const STORE = "workflows";
 // "seed"/"resolution" stay single fixed nodes (each has a small, known set of
@@ -338,31 +339,41 @@ async function setModelField(workflow, field, newValue) {
   toast(`Modello aggiornato: nodo #${field.nodeId} · ${field.fieldKey}.`, "success");
 }
 
-// Off by default: the menu only shows models confirmed compatible (right
-// folder AND right format) for that exact node — no mixing in "untested"
-// guesses that might still fail in ComfyUI. This checkbox is the only way
-// to see the 🟡 ones too, for the rare case a node type isn't recognized.
+// Off by default: the menu only shows models confirmed compatible for that
+// exact node — no mixing in unverified local guesses. This checkbox is the
+// only way to see those too, for when ComfyUI can't be reached at all.
 let showUntestedModels = false;
 
-function renderModelsPanel(workflow) {
-  const panel = qs("#workflow-models-panel");
-  const root = qs("#models-fields");
-  qs("#models-workflow-name").textContent = workflow.name;
-  root.innerHTML = "";
+function liveOptionsKey(nodeId, fieldKey) {
+  return `${nodeId}:${fieldKey}`;
+}
 
-  const fields = findModelFields(workflow);
-  const { entries: inventory } = loadModelInventory();
+// Renders the field rows given whatever live ComfyUI data (if any) was
+// already fetched — kept separate from renderModelsPanel() so toggling
+// "show untested" re-renders instantly without hitting the network again.
+function renderModelFieldRows(workflow, fields, liveOptionsByField) {
+  const root = qs("#models-fields");
+  root.innerHTML = "";
 
   if (fields.length === 0) {
     root.appendChild(
       el("p", { class: "hint full" }, "Nessun campo con un nome di file modello (.safetensors, .ckpt, .pt, .pth, .bin, .onnx, .gguf) trovato in questo flusso.")
     );
-  }
-  if (fields.length > 0 && inventory.length === 0) {
-    root.appendChild(el("p", { class: "hint full" }, "Carica prima il tuo elenco modelli locali qui sopra per poter scegliere delle alternative."));
+    return;
   }
 
-  if (fields.length > 0 && inventory.length > 0) {
+  const { entries: inventory } = loadModelInventory();
+  const anyLive = [...liveOptionsByField.values()].some((v) => v != null);
+  if (inventory.length === 0 && !anyLive) {
+    root.appendChild(
+      el(
+        "p",
+        { class: "hint full" },
+        "Carica prima il tuo elenco modelli locali qui sopra per poter scegliere delle alternative (oppure collega ComfyUI, nella scheda Connessione, per vedere l'elenco reale del server)."
+      )
+    );
+  }
+  if (inventory.length > 0) {
     root.appendChild(
       el("label", { class: "full checkbox-row" }, [
         el("input", {
@@ -370,40 +381,61 @@ function renderModelsPanel(workflow) {
           checked: showUntestedModels ? "checked" : false,
           onchange: (e) => {
             showUntestedModels = e.target.checked;
-            renderModelsPanel(workflow);
+            renderModelFieldRows(workflow, fields, liveOptionsByField);
           },
         }),
-        " Mostra anche i modelli 🟡 non verificati (categoria giusta ma mai confermati per questo nodo — rischio di errore in ComfyUI)",
+        " Mostra anche i modelli 🟡 non verificati (solo stima locale — categoria giusta ma mai confermati con ComfyUI, rischio di errore)",
       ])
     );
   }
 
   for (const field of fields) {
-    const { green, yellow, hiddenGguf } = categorizeModelsForField(field.node.class_type, field.fieldKey);
-    const offeredYellow = showUntestedModels ? yellow : [];
+    const liveOptions = liveOptionsByField.get(liveOptionsKey(field.nodeId, field.fieldKey));
+    const optgroups = [];
+    let statusText;
+    let statusOk;
+    let hiddenGguf = 0;
+
+    if (liveOptions != null) {
+      // Ground truth straight from ComfyUI's own /object_info: exactly what
+      // this server will accept right now, so nothing here can be wrong.
+      statusOk = liveOptions.length > 0;
+      statusText = statusOk
+        ? `✅ ${liveOptions.length} modell${liveOptions.length === 1 ? "o" : "i"} confermat${liveOptions.length === 1 ? "o" : "i"} da ComfyUI per questo nodo.`
+        : "⚠️ ComfyUI non elenca nessun modello per questo campo (cartella vuota o non configurata sul server).";
+      if (liveOptions.length) {
+        optgroups.push(el("optgroup", { label: "✅ Confermati da ComfyUI" }, liveOptions.map((v) => el("option", { value: v }, v))));
+      }
+    } else {
+      // ComfyUI unreachable, not connected, or this node type isn't loaded
+      // on that server — fall back to the local folder-name estimate,
+      // clearly marked as an estimate rather than a guarantee.
+      const categorized = categorizeModelsForField(field.node.class_type, field.fieldKey);
+      hiddenGguf = categorized.hiddenGguf;
+      const offeredYellow = showUntestedModels ? categorized.yellow : [];
+      statusOk = categorized.green.length > 0;
+      statusText = statusOk
+        ? `🟡 ${categorized.green.length} modell${categorized.green.length === 1 ? "o" : "i"} nella cartella giusta (stima locale, non verificata con ComfyUI).`
+        : "⚠️ Nessun modello trovato nella cartella giusta per questo nodo, nel tuo elenco locale.";
+      if (categorized.green.length) {
+        optgroups.push(el("optgroup", { label: "🟡 Stima locale" }, categorized.green.map((m) => el("option", { value: m.path }, m.path))));
+      }
+      if (offeredYellow.length) {
+        optgroups.push(el("optgroup", { label: "🟡 Non verificati" }, offeredYellow.map((m) => el("option", { value: m.path }, m.path))));
+      }
+    }
 
     const select = el(
       "select",
-      {
-        onchange: () => setModelField(workflow, field, select.value),
-      },
-      [
-        el("option", { value: field.currentValue, selected: "selected" }, `(attuale) ${field.currentValue}`),
-        ...(green.length ? [el("optgroup", { label: "✅ Compatibili" }, green.map((m) => el("option", { value: m.path }, m.path)))] : []),
-        ...(offeredYellow.length ? [el("optgroup", { label: "🟡 Non verificati" }, offeredYellow.map((m) => el("option", { value: m.path }, m.path)))] : []),
-      ]
+      { onchange: () => setModelField(workflow, field, select.value) },
+      [el("option", { value: field.currentValue, selected: "selected" }, `(attuale) ${field.currentValue}`), ...optgroups]
     );
 
     // Visible without opening the dropdown, so it's immediately clear
     // whether this specific node has anything actually compatible.
-    const statusText =
-      green.length > 0
-        ? `✅ ${green.length} modell${green.length === 1 ? "o" : "i"} compatibil${green.length === 1 ? "e" : "i"} trovat${green.length === 1 ? "o" : "i"} per questo nodo.`
-        : "⚠️ Nessun modello sicuramente compatibile trovato per questo nodo (categoria non riconosciuta o nessun file in quella cartella nel tuo elenco).";
-
     const labelChildren = [
       `#${field.nodeId} · ${field.node.class_type || "?"} · ${field.fieldKey}`,
-      el("span", { class: `hint small${green.length > 0 ? "" : " error"}` }, statusText),
+      el("span", { class: `hint small${statusOk ? "" : " error"}` }, statusText),
       select,
     ];
     if (hiddenGguf > 0) {
@@ -417,9 +449,46 @@ function renderModelsPanel(workflow) {
     }
     root.appendChild(el("label", { class: "full" }, labelChildren));
   }
+}
 
+async function renderModelsPanel(workflow) {
+  const panel = qs("#workflow-models-panel");
+  const root = qs("#models-fields");
+  qs("#models-workflow-name").textContent = workflow.name;
+  root.innerHTML = "";
   panel.hidden = false;
   panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  const fields = findModelFields(workflow);
+  const liveOptionsByField = new Map();
+
+  const settings = getConnectionSettings();
+  if (settings && fields.length > 0) {
+    root.appendChild(el("p", { class: "hint full", id: "models-live-loading" }, "🔄 Controllo l'elenco reale su ComfyUI..."));
+    try {
+      const client = new ComfyUIClient(settings);
+      const uniqueClassTypes = [...new Set(fields.map((f) => f.node.class_type))];
+      const infoByClassType = new Map();
+      await Promise.all(
+        uniqueClassTypes.map(async (classType) => {
+          try {
+            infoByClassType.set(classType, await client.getObjectInfo(classType));
+          } catch {
+            infoByClassType.set(classType, null); // this node type isn't on that server, or the request failed
+          }
+        })
+      );
+      for (const field of fields) {
+        const info = infoByClassType.get(field.node.class_type);
+        const live = info ? extractComboOptions(info, field.node.class_type, field.fieldKey) : null;
+        liveOptionsByField.set(liveOptionsKey(field.nodeId, field.fieldKey), live);
+      }
+    } catch {
+      // ComfyUI unreachable — every field falls back to the local estimate.
+    }
+  }
+
+  renderModelFieldRows(workflow, fields, liveOptionsByField);
 }
 
 async function setWorkflowMediaType(workflow, mediaType) {

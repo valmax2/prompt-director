@@ -47,6 +47,16 @@ export class ComfyUIClient {
     return response.json();
   }
 
+  // ComfyUI's own live node registry: for a combo/dropdown input (e.g. a
+  // model filename field), the response includes the EXACT list of values
+  // that node currently accepts on THIS server — the authoritative source,
+  // unlike guessing from a locally uploaded/scanned model list which can go
+  // stale or misjudge which folder/format a given node actually supports.
+  async getObjectInfo(classType) {
+    const response = await this._fetch(`/object_info/${encodeURIComponent(classType)}`);
+    return response.json();
+  }
+
   async uploadImage(blob, filename, subfolder = "") {
     // Uploading straight into ComfyUI's root input folder (no subfolder) by
     // default: it's the path format every LoadImage node unambiguously
