@@ -367,7 +367,9 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
   // (SDXL, Flux, SD1.5...) to actually work together — ComfyUI's own
   // per-field validation never catches this (a file just has to exist in
   // the right folder), so it's flagged here instead, from the filenames
-  // currently set on this workflow's model fields.
+  // currently set on this workflow's model fields. Recomputed on every
+  // re-render (every model change goes through here), so this line updates
+  // live — red while mixed, green the moment it resolves to one family.
   const familiesInUse = new Map(); // family -> [filenames]
   for (const field of fields) {
     const family = guessModelFamily(field.currentValue);
@@ -375,6 +377,11 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
     if (!familiesInUse.has(family)) familiesInUse.set(family, []);
     familiesInUse.get(family).push(field.currentValue);
   }
+  // Only usable as a filter anchor when exactly one family is in use — with
+  // zero, there's nothing to anchor to; with two or more already mixed, we
+  // can't know which one is "right", so every field stays unfiltered.
+  const dominantFamily = familiesInUse.size === 1 ? [...familiesInUse.keys()][0] : null;
+
   if (familiesInUse.size > 1) {
     const summary = [...familiesInUse.entries()].map(([family, files]) => `${family} (${files.join(", ")})`).join(" · ");
     root.appendChild(
@@ -384,6 +391,8 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
         `⚠️ Questo flusso sembra mischiare famiglie di modelli diverse, a giudicare dai nomi dei file: ${summary}. Se non è voluto, è una causa comune di errori o immagini rotte — checkpoint, VAE, text encoder, LoRA e ControlNet devono di solito appartenere tutti alla stessa famiglia.`
       )
     );
+  } else if (dominantFamily) {
+    root.appendChild(el("p", { class: "hint full ok" }, `✅ Famiglia dei modelli coerente in tutto il flusso: ${dominantFamily}.`));
   }
 
   const { entries: inventory } = loadModelInventory();
@@ -413,6 +422,25 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
     );
   }
 
+  // Filters a candidate list down to models that either match the
+  // workflow's already-detected family or have no recognizable family at
+  // all (never rule those out — the heuristic just doesn't know, not "no").
+  // Only active when the workflow has settled on exactly one family.
+  // `getFilename` handles the two different candidate shapes: live
+  // ComfyUI options are plain filename strings, local-inventory ones are
+  // {category, path, filename} objects.
+  function filterByFamily(values, getFilename = (v) => v) {
+    if (!dominantFamily) return { kept: values, hiddenCount: 0 };
+    const kept = [];
+    let hiddenCount = 0;
+    for (const v of values) {
+      const family = guessModelFamily(getFilename(v));
+      if (!family || family === dominantFamily) kept.push(v);
+      else hiddenCount++;
+    }
+    return { kept, hiddenCount };
+  }
+
   for (const field of fields) {
     const liveOptions = liveOptionsByField.get(liveOptionsKey(field.nodeId, field.fieldKey));
     const optgroups = [];
@@ -422,13 +450,19 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
 
     if (liveOptions != null) {
       // Ground truth straight from ComfyUI's own /object_info: exactly what
-      // this server will accept right now, so nothing here can be wrong.
-      statusOk = liveOptions.length > 0;
+      // this server will accept right now, so nothing here can be wrong —
+      // still narrowed down to this workflow's family, since ComfyUI's own
+      // list doesn't know or care about that distinction.
+      const { kept, hiddenCount } = filterByFamily(liveOptions);
+      statusOk = kept.length > 0;
+      const hiddenNote = hiddenCount > 0 ? ` (${hiddenCount} di altre famiglie nascosti)` : "";
       statusText = statusOk
-        ? `✅ ${liveOptions.length} modell${liveOptions.length === 1 ? "o" : "i"} confermat${liveOptions.length === 1 ? "o" : "i"} da ComfyUI per questo nodo.`
-        : "⚠️ ComfyUI non elenca nessun modello per questo campo (cartella vuota o non configurata sul server).";
-      if (liveOptions.length) {
-        optgroups.push(el("optgroup", { label: "✅ Confermati da ComfyUI" }, liveOptions.map((v) => el("option", { value: v }, v))));
+        ? `✅ ${kept.length} modell${kept.length === 1 ? "o" : "i"} confermat${kept.length === 1 ? "o" : "i"} da ComfyUI per questo nodo${hiddenNote}.`
+        : liveOptions.length > 0
+          ? `⚠️ ComfyUI conosce ${liveOptions.length} modelli per questo campo, ma nessuno sembra della famiglia "${dominantFamily}" rilevata in questo flusso.`
+          : "⚠️ ComfyUI non elenca nessun modello per questo campo (cartella vuota o non configurata sul server).";
+      if (kept.length) {
+        optgroups.push(el("optgroup", { label: "✅ Confermati da ComfyUI" }, kept.map((v) => el("option", { value: v }, v))));
       }
     } else {
       // ComfyUI unreachable, not connected, or this node type isn't loaded
@@ -436,13 +470,15 @@ function renderModelFieldRows(workflow, fields, liveOptionsByField) {
       // clearly marked as an estimate rather than a guarantee.
       const categorized = categorizeModelsForField(field.node.class_type, field.fieldKey);
       hiddenGguf = categorized.hiddenGguf;
-      const offeredYellow = showUntestedModels ? categorized.yellow : [];
-      statusOk = categorized.green.length > 0;
+      const { kept: greenKept, hiddenCount: greenHidden } = filterByFamily(categorized.green, (m) => m.filename);
+      const offeredYellow = showUntestedModels ? filterByFamily(categorized.yellow, (m) => m.filename).kept : [];
+      statusOk = greenKept.length > 0;
+      const hiddenNote = greenHidden > 0 ? ` (${greenHidden} di altre famiglie nascosti)` : "";
       statusText = statusOk
-        ? `🟡 ${categorized.green.length} modell${categorized.green.length === 1 ? "o" : "i"} nella cartella giusta (stima locale, non verificata con ComfyUI).`
+        ? `🟡 ${greenKept.length} modell${greenKept.length === 1 ? "o" : "i"} nella cartella giusta (stima locale, non verificata con ComfyUI)${hiddenNote}.`
         : "⚠️ Nessun modello trovato nella cartella giusta per questo nodo, nel tuo elenco locale.";
-      if (categorized.green.length) {
-        optgroups.push(el("optgroup", { label: "🟡 Stima locale" }, categorized.green.map((m) => el("option", { value: m.path }, m.path))));
+      if (greenKept.length) {
+        optgroups.push(el("optgroup", { label: "🟡 Stima locale" }, greenKept.map((m) => el("option", { value: m.path }, m.path))));
       }
       if (offeredYellow.length) {
         optgroups.push(el("optgroup", { label: "🟡 Non verificati" }, offeredYellow.map((m) => el("option", { value: m.path }, m.path))));

@@ -134,6 +134,7 @@ h2 { margin-top: 0; }
 .hint { color: var(--text-dim); font-size: 13px; margin-top: -8px; margin-bottom: 16px; }
 .hint.small { font-size: 12px; }
 .hint.error { color: var(--danger); }
+.hint.ok { color: var(--success); }
 
 .step-title {
   margin: 0 0 14px;
