@@ -338,6 +338,12 @@ async function setModelField(workflow, field, newValue) {
   toast(`Modello aggiornato: nodo #${field.nodeId} · ${field.fieldKey}.`, "success");
 }
 
+// Off by default: the menu only shows models confirmed compatible (right
+// folder AND right format) for that exact node — no mixing in "untested"
+// guesses that might still fail in ComfyUI. This checkbox is the only way
+// to see the 🟡 ones too, for the rare case a node type isn't recognized.
+let showUntestedModels = false;
+
 function renderModelsPanel(workflow) {
   const panel = qs("#workflow-models-panel");
   const root = qs("#models-fields");
@@ -356,8 +362,26 @@ function renderModelsPanel(workflow) {
     root.appendChild(el("p", { class: "hint full" }, "Carica prima il tuo elenco modelli locali qui sopra per poter scegliere delle alternative."));
   }
 
+  if (fields.length > 0 && inventory.length > 0) {
+    root.appendChild(
+      el("label", { class: "full checkbox-row" }, [
+        el("input", {
+          type: "checkbox",
+          checked: showUntestedModels ? "checked" : false,
+          onchange: (e) => {
+            showUntestedModels = e.target.checked;
+            renderModelsPanel(workflow);
+          },
+        }),
+        " Mostra anche i modelli 🟡 non verificati (categoria giusta ma mai confermati per questo nodo — rischio di errore in ComfyUI)",
+      ])
+    );
+  }
+
   for (const field of fields) {
     const { green, yellow, hiddenGguf } = categorizeModelsForField(field.node.class_type, field.fieldKey);
+    const offeredYellow = showUntestedModels ? yellow : [];
+
     const select = el(
       "select",
       {
@@ -366,10 +390,22 @@ function renderModelsPanel(workflow) {
       [
         el("option", { value: field.currentValue, selected: "selected" }, `(attuale) ${field.currentValue}`),
         ...(green.length ? [el("optgroup", { label: "✅ Compatibili" }, green.map((m) => el("option", { value: m.path }, m.path)))] : []),
-        ...(yellow.length ? [el("optgroup", { label: "🟡 Da provare" }, yellow.map((m) => el("option", { value: m.path }, m.path)))] : []),
+        ...(offeredYellow.length ? [el("optgroup", { label: "🟡 Non verificati" }, offeredYellow.map((m) => el("option", { value: m.path }, m.path)))] : []),
       ]
     );
-    const labelChildren = [`#${field.nodeId} · ${field.node.class_type || "?"} · ${field.fieldKey}`, select];
+
+    // Visible without opening the dropdown, so it's immediately clear
+    // whether this specific node has anything actually compatible.
+    const statusText =
+      green.length > 0
+        ? `✅ ${green.length} modell${green.length === 1 ? "o" : "i"} compatibil${green.length === 1 ? "e" : "i"} trovat${green.length === 1 ? "o" : "i"} per questo nodo.`
+        : "⚠️ Nessun modello sicuramente compatibile trovato per questo nodo (categoria non riconosciuta o nessun file in quella cartella nel tuo elenco).";
+
+    const labelChildren = [
+      `#${field.nodeId} · ${field.node.class_type || "?"} · ${field.fieldKey}`,
+      el("span", { class: `hint small${green.length > 0 ? "" : " error"}` }, statusText),
+      select,
+    ];
     if (hiddenGguf > 0) {
       labelChildren.push(
         el(
