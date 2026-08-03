@@ -171,16 +171,37 @@ export function clearModelInventory() {
 // expected to draw from, yellow = everything else (untested — ComfyUI
 // itself doesn't enforce that a node's input value lives in any particular
 // models/ subfolder, so a yellow pick can still work, just isn't confirmed).
+// GGUF is a different (quantized/compressed) file format, not just another
+// folder — the plain built-in loaders (UNETLoader, CheckpointLoaderSimple,
+// LoraLoader, VAELoader...) genuinely cannot read it, only a class_type
+// containing "GGUF" (from the ComfyUI-GGUF custom node pack, e.g.
+// "UnetLoaderGGUF") can. A same-folder match alone used to mark these as
+// ✅ compatible, which was wrong: ComfyUI rejects them outright with
+// "value not in list" regardless of the folder being correct. Excluded
+// entirely here rather than downgraded to 🟡, since "untested, might work"
+// would still be misleading for something that's guaranteed to fail.
+const GGUF_EXTENSION = /\.gguf$/i;
+
+function nodeSupportsGguf(classType) {
+  return /gguf/i.test(classType || "");
+}
+
 export function categorizeModelsForField(classType, fieldKey) {
   const { entries } = loadModelInventory();
   const expected = inferExpectedCategories(classType, fieldKey);
-  if (!expected) return { green: [], yellow: entries };
+  const supportsGguf = nodeSupportsGguf(classType);
   const green = [];
   const yellow = [];
+  let hiddenGguf = 0;
   for (const entry of entries) {
-    (expected.includes(entry.category) ? green : yellow).push(entry);
+    if (GGUF_EXTENSION.test(entry.filename) && !supportsGguf) {
+      hiddenGguf++;
+      continue;
+    }
+    if (expected && expected.includes(entry.category)) green.push(entry);
+    else yellow.push(entry);
   }
-  return { green, yellow };
+  return { green, yellow, hiddenGguf };
 }
 
 function summaryText(inventory) {

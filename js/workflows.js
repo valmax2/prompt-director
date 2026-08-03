@@ -357,7 +357,7 @@ function renderModelsPanel(workflow) {
   }
 
   for (const field of fields) {
-    const { green, yellow } = categorizeModelsForField(field.node.class_type, field.fieldKey);
+    const { green, yellow, hiddenGguf } = categorizeModelsForField(field.node.class_type, field.fieldKey);
     const select = el(
       "select",
       {
@@ -369,9 +369,17 @@ function renderModelsPanel(workflow) {
         ...(yellow.length ? [el("optgroup", { label: "🟡 Da provare" }, yellow.map((m) => el("option", { value: m.path }, m.path)))] : []),
       ]
     );
-    root.appendChild(
-      el("label", { class: "full" }, [`#${field.nodeId} · ${field.node.class_type || "?"} · ${field.fieldKey}`, select])
-    );
+    const labelChildren = [`#${field.nodeId} · ${field.node.class_type || "?"} · ${field.fieldKey}`, select];
+    if (hiddenGguf > 0) {
+      labelChildren.push(
+        el(
+          "span",
+          { class: "hint small" },
+          `⚠️ ${hiddenGguf} file .gguf nascosti: questo nodo non li supporta (serve un nodo dedicato, es. "UnetLoaderGGUF", dall'estensione ComfyUI-GGUF).`
+        )
+      );
+    }
+    root.appendChild(el("label", { class: "full" }, labelChildren));
   }
 
   panel.hidden = false;
