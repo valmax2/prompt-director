@@ -1,6 +1,7 @@
 import { db } from "./db.js";
 import { qs, el, uid, toast, formatDate, downloadBlob, sanitizeFilename } from "./utils.js";
 import { getActiveWorkflowId, setActiveWorkflowId } from "./state.js";
+import { isModelFilename, categorizeModelsForField, loadModelInventory } from "./models.js";
 
 const STORE = "workflows";
 // "seed"/"resolution" stay single fixed nodes (each has a small, known set of
@@ -315,6 +316,68 @@ async function saveMapping() {
   window.dispatchEvent(new CustomEvent("workflow-mapping-updated"));
 }
 
+// Any node input whose CURRENT value already looks like a model filename is
+// treated as a model-swap candidate — generic over class_type on purpose
+// (same reasoning as the rest of the mapping system), so a custom/unknown
+// loader node still shows up here without needing to be special-cased.
+function findModelFields(workflow) {
+  const fields = [];
+  for (const [nodeId, node] of Object.entries(workflow.json || {})) {
+    for (const [fieldKey, value] of Object.entries(node.inputs || {})) {
+      if (isModelFilename(value)) fields.push({ nodeId, node, fieldKey, currentValue: value });
+    }
+  }
+  return fields;
+}
+
+async function setModelField(workflow, field, newValue) {
+  field.node.inputs[field.fieldKey] = newValue;
+  await db.put(STORE, workflow);
+  await loadAll();
+  renderList();
+  toast(`Modello aggiornato: nodo #${field.nodeId} · ${field.fieldKey}.`, "success");
+}
+
+function renderModelsPanel(workflow) {
+  const panel = qs("#workflow-models-panel");
+  const root = qs("#models-fields");
+  qs("#models-workflow-name").textContent = workflow.name;
+  root.innerHTML = "";
+
+  const fields = findModelFields(workflow);
+  const { entries: inventory } = loadModelInventory();
+
+  if (fields.length === 0) {
+    root.appendChild(
+      el("p", { class: "hint full" }, "Nessun campo con un nome di file modello (.safetensors, .ckpt, .pt, .pth, .bin, .onnx, .gguf) trovato in questo flusso.")
+    );
+  }
+  if (fields.length > 0 && inventory.length === 0) {
+    root.appendChild(el("p", { class: "hint full" }, "Carica prima il tuo elenco modelli locali qui sopra per poter scegliere delle alternative."));
+  }
+
+  for (const field of fields) {
+    const { green, yellow } = categorizeModelsForField(field.node.class_type, field.fieldKey);
+    const select = el(
+      "select",
+      {
+        onchange: () => setModelField(workflow, field, select.value),
+      },
+      [
+        el("option", { value: field.currentValue, selected: "selected" }, `(attuale) ${field.currentValue}`),
+        ...(green.length ? [el("optgroup", { label: "✅ Compatibili" }, green.map((m) => el("option", { value: m.path }, m.path)))] : []),
+        ...(yellow.length ? [el("optgroup", { label: "🟡 Da provare" }, yellow.map((m) => el("option", { value: m.path }, m.path)))] : []),
+      ]
+    );
+    root.appendChild(
+      el("label", { class: "full" }, [`#${field.nodeId} · ${field.node.class_type || "?"} · ${field.fieldKey}`, select])
+    );
+  }
+
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
 async function setWorkflowMediaType(workflow, mediaType) {
   workflow.mediaType = mediaType;
   await db.put(STORE, workflow);
@@ -347,6 +410,12 @@ function buildWorkflowCard(workflow, isActive) {
         type: "button",
         onclick: () => renderMappingPanel(workflow),
       }, "Mappa nodi"),
+      el("button", {
+        class: "btn small",
+        type: "button",
+        title: "Cambia quale modello locale (checkpoint, lora, VAE...) usa ogni nodo del flusso",
+        onclick: () => renderModelsPanel(workflow),
+      }, "🧩 Modelli"),
       el("button", {
         class: "btn small",
         type: "button",
@@ -478,6 +547,9 @@ export async function initWorkflows() {
   });
 
   qs("#mapping-save").addEventListener("click", saveMapping);
+  qs("#models-panel-close-btn").addEventListener("click", () => {
+    qs("#workflow-models-panel").hidden = true;
+  });
 }
 
 export function listWorkflows() {

@@ -161,6 +161,28 @@
       <p class="hint small">Il tipo (immagine o animazione/video) viene rilevato automaticamente dai nodi del workflow; puoi correggerlo a mano su ogni scheda con "Sposta in..." se serve.</p>
     </div>
 
+    <div class="card">
+      <h3 class="step-title">📦 I miei modelli locali</h3>
+      <p class="hint small">Carica un file di testo con l'elenco dei modelli che hai nella cartella <code>ComfyUI/models</code> sul tuo PC (un percorso per riga, es. <code>loras/mio_lora.safetensors</code>) per poterli scegliere quando modifichi un flusso, invece di doverli scrivere a mano.</p>
+      <details class="hint small">
+        <summary>Come genero il file?</summary>
+        <p>Apri un terminale nella cartella <code>ComfyUI/models</code> ed esegui:</p>
+        <p><strong>Windows (PowerShell):</strong></p>
+        <pre>Get-ChildItem -Recurse -File | ForEach-Object { $_.FullName.Substring((Get-Location).Path.Length + 1) -replace '\\','/' } | Out-File -Encoding utf8 modelli.txt</pre>
+        <p><strong>Mac / Linux:</strong></p>
+        <pre>find . -type f | sed 's|^\./||' > modelli.txt</pre>
+        <p>Poi carica il file <code>modelli.txt</code> creato qui sotto.</p>
+      </details>
+      <div class="form-actions">
+        <label class="btn primary">
+          📂 Carica elenco modelli (.txt)
+          <input type="file" id="model-inventory-upload" accept=".txt,text/plain" hidden>
+        </label>
+        <button type="button" id="model-inventory-clear-btn" class="btn ghost">Svuota elenco</button>
+      </div>
+      <p class="status-box" id="model-inventory-summary"></p>
+    </div>
+
     <h3 class="step-title">🖼️ Flussi immagine</h3>
     <div id="workflow-list-image" class="card-grid"></div>
 
@@ -174,6 +196,15 @@
       <div class="form-grid" id="mapping-fields"></div>
       <div class="form-actions">
         <button id="mapping-save" class="btn primary">Salva mappatura</button>
+      </div>
+    </div>
+
+    <div id="workflow-models-panel" class="card" hidden>
+      <h3>🧩 Modelli — <span id="models-workflow-name"></span></h3>
+      <p class="hint">Cambia quale file modello locale usa ogni nodo del flusso che ne referenzia uno (checkpoint, lora, VAE, ControlNet...). ✅ = categoria compatibile col tipo di nodo, 🟡 = da provare (categoria diversa o non riconosciuta). La scelta si salva subito sul flusso.</p>
+      <div id="models-fields" class="form-grid"></div>
+      <div class="form-actions">
+        <button type="button" id="models-panel-close-btn" class="btn ghost">Chiudi</button>
       </div>
     </div>
   </section>

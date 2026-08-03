@@ -171,6 +171,19 @@ h2 { margin-top: 0; }
 }
 .form-grid .full { grid-column: 1 / -1; }
 
+code { background: rgba(255, 255, 255, 0.08); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+pre {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+details summary { cursor: pointer; color: var(--accent); }
+
 .image-mappings-block { grid-column: 1 / -1; }
 .image-mappings-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .image-mapping-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
