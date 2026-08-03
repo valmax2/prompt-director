@@ -1,4 +1,4 @@
-import { qs, el, toast } from "./utils.js";
+import { qs, el, toast, downloadBlob } from "./utils.js";
 
 const STORAGE_KEY = "comic-studio:model-inventory";
 const MODEL_FILE_EXTENSIONS = /\.(safetensors|ckpt|pt|pth|bin|onnx|gguf)$/i;
@@ -68,6 +68,86 @@ export function parseModelListText(text) {
   return entries;
 }
 
+// Structured counterpart to parseModelListText(): produced by
+// buildInventoryJson()/scanModelsFolder() below, and re-loadable later so a
+// scan done once can be re-uploaded on another device without redoing it.
+export function buildInventoryJson(entries) {
+  return JSON.stringify(
+    {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      models: entries.map((e) => ({ category: e.category, path: e.path })),
+    },
+    null,
+    2
+  );
+}
+
+export function parseModelInventoryJson(text) {
+  const data = JSON.parse(text);
+  const models = Array.isArray(data?.models) ? data.models : [];
+  const entries = [];
+  const seen = new Set();
+  for (const m of models) {
+    const path = String(m?.path || "").replace(/\\/g, "/").trim();
+    const segments = path.split("/").filter(Boolean);
+    const filename = segments[segments.length - 1];
+    if (!filename || !isModelFilename(filename)) continue;
+    const category = normalizeCategory(m?.category || "");
+    const key = `${category}:${path}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push({ category, path, filename });
+  }
+  return entries;
+}
+
+// File System Access API (Chromium desktop only — no Firefox/Safari, no
+// mobile browsers) lets the app read a picked folder's file/directory names
+// directly, without any upload — so the model list can be regenerated with
+// one click instead of running a terminal command by hand every time.
+export function isDirectoryScanSupported() {
+  return typeof window !== "undefined" && !!window.showDirectoryPicker;
+}
+
+async function walkDirectoryForModels(dirHandle, category, pathPrefix, entries, seen) {
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === "directory") {
+      await walkDirectoryForModels(handle, category, `${pathPrefix}${name}/`, entries, seen);
+    } else if (isModelFilename(name)) {
+      const path = `${pathPrefix}${name}`;
+      const key = `${category}:${path}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      entries.push({ category, path, filename: name });
+    }
+  }
+}
+
+// The picked folder is expected to be ComfyUI's "models" folder itself —
+// its immediate subfolders (checkpoints/loras/vae/...) become the
+// categories, exactly like a manually-typed list's first path segment.
+export async function scanModelsFolder() {
+  if (!isDirectoryScanSupported()) {
+    throw new Error("La scansione automatica richiede un browser desktop basato su Chrome/Edge — non è disponibile su questo browser o dispositivo.");
+  }
+  const rootHandle = await window.showDirectoryPicker({ id: "comfyui-models", mode: "read" });
+  const entries = [];
+  const seen = new Set();
+  for await (const [name, handle] of rootHandle.entries()) {
+    if (handle.kind === "directory") {
+      await walkDirectoryForModels(handle, normalizeCategory(name), "", entries, seen);
+    } else if (isModelFilename(name)) {
+      const key = `:${name}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        entries.push({ category: "", path: name, filename: name });
+      }
+    }
+  }
+  return entries;
+}
+
 export function loadModelInventory() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -117,10 +197,17 @@ function renderSummary() {
 
 async function handleModelListUpload(file) {
   const text = await file.text();
-  const entries = parseModelListText(text);
+  const isJson = file.name.toLowerCase().endsWith(".json");
+  let entries;
+  try {
+    entries = isJson ? parseModelInventoryJson(text) : parseModelListText(text);
+  } catch (err) {
+    toast(`Errore nel file "${file.name}": ${err.message}`, "error", 6000);
+    return;
+  }
   if (entries.length === 0) {
     toast(
-      "Nessun modello riconosciuto in quel file (servono righe che finiscono con .safetensors, .ckpt, .pt, .pth, .bin, .onnx o .gguf).",
+      "Nessun modello riconosciuto in quel file (servono righe/percorsi che finiscono con .safetensors, .ckpt, .pt, .pth, .bin, .onnx o .gguf).",
       "error",
       6000
     );
@@ -130,6 +217,25 @@ async function handleModelListUpload(file) {
   renderSummary();
   toast(`${entries.length} modelli caricati.`, "success");
   window.dispatchEvent(new CustomEvent("model-inventory-updated"));
+}
+
+async function handleScanFolder() {
+  try {
+    const entries = await scanModelsFolder();
+    if (entries.length === 0) {
+      toast("Nessun file modello trovato in quella cartella.", "error");
+      return;
+    }
+    const json = buildInventoryJson(entries);
+    await downloadBlob(new Blob([json], { type: "application/json" }), "comfy_inventory_v1.json");
+    saveModelInventory(entries, "comfy_inventory_v1.json");
+    renderSummary();
+    toast(`${entries.length} modelli trovati e caricati (comfy_inventory_v1.json salvato).`, "success");
+    window.dispatchEvent(new CustomEvent("model-inventory-updated"));
+  } catch (err) {
+    if (err?.name === "AbortError") return; // user closed the folder picker — nothing to do
+    toast(`Errore durante la scansione: ${err.message}`, "error", 6000);
+  }
 }
 
 export function initModelInventory() {
@@ -145,4 +251,12 @@ export function initModelInventory() {
     toast("Elenco modelli svuotato.", "info");
     window.dispatchEvent(new CustomEvent("model-inventory-updated"));
   });
+
+  const scanBtn = qs("#model-inventory-scan-btn");
+  if (isDirectoryScanSupported()) {
+    scanBtn.addEventListener("click", handleScanFolder);
+  } else {
+    scanBtn.disabled = true;
+    scanBtn.title = "Richiede un browser desktop basato su Chrome/Edge (non disponibile qui).";
+  }
 }

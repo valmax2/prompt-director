@@ -165,9 +165,13 @@
 
     <div class="card">
       <h3 class="step-title">📦 I miei modelli locali</h3>
-      <p class="hint small">Carica un file di testo con l'elenco dei modelli che hai nella cartella <code>ComfyUI/models</code> sul tuo PC (un percorso per riga, es. <code>loras/mio_lora.safetensors</code>) per poterli scegliere quando modifichi un flusso, invece di doverli scrivere a mano.</p>
+      <p class="hint small">Carica l'elenco dei modelli che hai nella cartella <code>ComfyUI/models</code> sul tuo PC per poterli scegliere quando modifichi un flusso, invece di doverli scrivere a mano.</p>
+      <div class="form-actions">
+        <button type="button" id="model-inventory-scan-btn" class="btn primary">🔍 Genera comfy_inventory_v1.json (scansiona cartella)</button>
+      </div>
+      <p class="hint small">Il modo più veloce: scegli la cartella <code>ComfyUI/models</code> una volta, l'app la scansiona da sola e crea/carica il file <code>comfy_inventory_v1.json</code> — utile da rifare velocemente ogni volta che scarichi nuovi modelli. Richiede un browser desktop basato su Chrome/Edge; non funziona su cellulare o Firefox/Safari.</p>
       <details class="hint small">
-        <summary>Come genero il file?</summary>
+        <summary>In alternativa: file di testo scritto a mano (funziona ovunque)</summary>
         <p>Apri un terminale nella cartella <code>ComfyUI/models</code> ed esegui:</p>
         <p><strong>Windows (PowerShell):</strong></p>
         <pre>Get-ChildItem -Recurse -File | ForEach-Object { $_.FullName.Substring((Get-Location).Path.Length + 1) -replace '\\','/' } | Out-File -Encoding utf8 modelli.txt</pre>
@@ -176,9 +180,9 @@
         <p>Poi carica il file <code>modelli.txt</code> creato qui sotto.</p>
       </details>
       <div class="form-actions">
-        <label class="btn primary">
-          📂 Carica elenco modelli (.txt)
-          <input type="file" id="model-inventory-upload" accept=".txt,text/plain" hidden>
+        <label class="btn">
+          📂 Carica elenco modelli (.txt o .json)
+          <input type="file" id="model-inventory-upload" accept=".txt,text/plain,.json,application/json" hidden>
         </label>
         <button type="button" id="model-inventory-clear-btn" class="btn ghost">Svuota elenco</button>
       </div>
