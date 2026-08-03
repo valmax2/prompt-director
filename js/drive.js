@@ -32,6 +32,12 @@ export function getConnectedEmail() {
   return localStorage.getItem(CONNECTED_EMAIL_KEY) || "";
 }
 
+// Cached locally as soon as findAppFolderId() has resolved it once (see
+// below) — null until then, e.g. before the very first sync.
+export function getAppFolderId() {
+  return localStorage.getItem(FOLDER_ID_KEY) || null;
+}
+
 function ensureTokenClient() {
   if (!tokenClient) {
     tokenClient = window.google.accounts.oauth2.initTokenClient({

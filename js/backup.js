@@ -46,7 +46,17 @@ function refreshConnectionUI() {
   qs("#backup-connect-btn").hidden = connected;
   qs("#backup-disconnect-btn").hidden = !connected;
   qs("#backup-sync-btn").disabled = !connected;
+  qs("#backup-open-drive-btn").disabled = !connected;
   qs("#backup-account").textContent = connected ? `Connesso come ${drive.getConnectedEmail() || "il tuo account Google"}.` : "Non connesso.";
+}
+
+// Deep-links straight into the "Comic Studio" folder once its id is known
+// (after the first sync); before that, opens Drive's root as a reasonable
+// fallback rather than doing nothing.
+function handleOpenDrive() {
+  const folderId = drive.getAppFolderId();
+  const url = folderId ? `https://drive.google.com/drive/folders/${folderId}` : "https://drive.google.com/drive/my-drive";
+  window.open(url, "_blank", "noopener");
 }
 
 async function runSync({ silent = false } = {}) {
@@ -103,6 +113,7 @@ export function initBackup() {
   qs("#backup-connect-btn").addEventListener("click", handleConnect);
   qs("#backup-disconnect-btn").addEventListener("click", handleDisconnect);
   qs("#backup-sync-btn").addEventListener("click", () => runSync());
+  qs("#backup-open-drive-btn").addEventListener("click", handleOpenDrive);
 
   // These events already exist (or were added alongside this feature) for
   // each store's own reasons — reusing them here means new/changed
