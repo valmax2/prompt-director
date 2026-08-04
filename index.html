@@ -266,6 +266,16 @@
       <div class="full status-box" id="charsheet-status"></div>
     </div>
     <div id="charsheet-grid" class="card-grid"></div>
+
+    <div class="card">
+      <h3 class="step-title">Opzione senza API — copia e incolla</h3>
+      <p class="hint small">Nessuna API key richiesta: usa il sito/app che hai già (es. ChatGPT Plus, Gemini). Per ogni angolazione copia il prompt, apri l'IA, incolla il testo e poi l'immagine del personaggio (bottone qui sotto o dalla scheda Personaggi → Copia immagine) — l'IA genera l'immagine, che poi scarichi tu.</p>
+      <div class="form-actions">
+        <button type="button" id="charsheet-noapi-open-btn" class="btn primary">🔗 Apri IA</button>
+        <button type="button" id="charsheet-noapi-copyimg-btn" class="btn small">📋 Copia immagine personaggio</button>
+      </div>
+      <div id="charsheet-noapi-list" class="card-grid"></div>
+    </div>
   </section>
 
   <!-- CREA SCENA (flusso unico: personaggio → scena → regia → genera) -->

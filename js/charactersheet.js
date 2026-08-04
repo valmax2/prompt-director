@@ -1,7 +1,7 @@
-import { qs, qsa, el, uid, toast, thumbWithPrivacyToggle, createObjectUrlTracker } from "./utils.js";
+import { qs, qsa, el, uid, toast, thumbWithPrivacyToggle, createObjectUrlTracker, copyToClipboard, copyImageToClipboard } from "./utils.js";
 import { listCharacters, getCharacterById } from "./characters.js";
 import { getActiveWorkflow } from "./workflows.js";
-import { getConnectionSettings, getGenerationMode, getActiveProvider, getProviderSettings } from "./state.js";
+import { getConnectionSettings, getGenerationMode, getActiveProvider, getProviderSettings, onStateChange } from "./state.js";
 import { ComfyUIClient, ComfyUIError } from "./comfyui.js";
 import { addArchiveImage, refreshArchive } from "./archive.js";
 import { optimizePrompt, tagify, DEFAULT_NEGATIVE_EN } from "./translate.js";
@@ -172,6 +172,64 @@ function renderCharacterOptions() {
   select.value = selectedCharacterId;
 }
 
+async function handleCopyViewPrompt(character, view, mode) {
+  const positive = buildPositivePrompt(character, view, mode);
+  const negative = buildNegativePrompt();
+  const combined = `${positive}\n\nDa evitare: ${negative}`;
+  const ok = await copyToClipboard(combined);
+  toast(ok ? `Prompt "${view.label}" copiato.` : "Copia non riuscita.", ok ? "success" : "error");
+}
+
+async function handleCopyCharacterImage() {
+  if (!selectedCharacterId) {
+    toast("Seleziona prima un personaggio.", "error");
+    return;
+  }
+  const character = await getCharacterById(selectedCharacterId);
+  if (!character) {
+    toast("Personaggio non trovato.", "error");
+    return;
+  }
+  const blob = character.identityBlob || character.blob;
+  const ok = await copyImageToClipboard(blob);
+  toast(ok ? "Immagine copiata: incollala nell'IA." : "Copia immagine non riuscita (browser non supportato).", ok ? "success" : "error");
+}
+
+function handleOpenProvider() {
+  const meta = getProviderMeta(getActiveProvider());
+  if (meta?.consumerAppUrl) window.open(meta.consumerAppUrl, "_blank", "noopener");
+}
+
+async function renderNoApiSection() {
+  const openBtn = qs("#charsheet-noapi-open-btn");
+  const list = qs("#charsheet-noapi-list");
+  if (!openBtn || !list) return;
+
+  const meta = getProviderMeta(getActiveProvider());
+  openBtn.textContent = `🔗 Apri ${meta?.label || "IA"}`;
+
+  list.innerHTML = "";
+  if (!selectedCharacterId) {
+    list.appendChild(el("p", { class: "hint" }, "Seleziona un personaggio per vedere i 6 prompt da copiare."));
+    return;
+  }
+  const character = await getCharacterById(selectedCharacterId);
+  if (!character) return;
+  const mode = MODES[selectedMode];
+
+  for (const view of VIEWS) {
+    const row = el("div", { class: "item-card" }, [
+      el("div", { class: "name", text: view.label }),
+      el(
+        "button",
+        { type: "button", class: "btn small", onclick: () => handleCopyViewPrompt(character, view, mode) },
+        "📋 Copia prompt"
+      ),
+    ]);
+    list.appendChild(row);
+  }
+}
+
 function renderResults() {
   const grid = qs("#charsheet-grid");
   if (!grid) return;
@@ -283,15 +341,27 @@ async function handleGenerateSheet() {
 export function initCharacterSheet() {
   renderCharacterOptions();
   renderResults();
+  renderNoApiSection();
 
   qs("#charsheet-character-select").addEventListener("change", (e) => {
     selectedCharacterId = e.target.value;
+    renderNoApiSection();
   });
   qsa("input[name=charsheet-mode]").forEach((radio) => {
     radio.addEventListener("change", (e) => {
       if (e.target.checked) selectedMode = e.target.value;
+      renderNoApiSection();
     });
   });
   qs("#charsheet-generate-btn").addEventListener("click", handleGenerateSheet);
-  window.addEventListener("characters-updated", renderCharacterOptions);
+  qs("#charsheet-noapi-open-btn").addEventListener("click", handleOpenProvider);
+  qs("#charsheet-noapi-copyimg-btn").addEventListener("click", handleCopyCharacterImage);
+  window.addEventListener("characters-updated", () => {
+    renderCharacterOptions();
+    renderNoApiSection();
+  });
+  window.addEventListener("generation-mode-ui-updated", renderNoApiSection);
+  onStateChange((event) => {
+    if (event === "active-provider-updated" || event === "provider-settings-updated") renderNoApiSection();
+  });
 }
