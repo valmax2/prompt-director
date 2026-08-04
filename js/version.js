@@ -2,6 +2,6 @@
 // version's number — always increment). Shown in the page title and footer
 // so it's obvious which build is running, especially useful since this app
 // is redeployed straight to GitHub Pages rather than distributed as builds.
-export const APP_VERSION = "2.12.1";
+export const APP_VERSION = "2.13.0";
 export const APP_VERSION_LABEL = `Comic Studio v${APP_VERSION}`;
-export const APP_VERSION_NOTES = "\"🧩 Modelli\" ora filtra davvero i menu per famiglia (non solo un avviso): se il flusso è già SDXL, i modelli di altre famiglie non vengono più proposti. La riga di stato diventa verde/rossa in tempo reale a ogni scelta.";
+export const APP_VERSION_NOTES = "Nuova scheda \"🪪 Scheda Personaggio\": genera in automatico 6 immagini dello stesso personaggio (fronte, 3/4, profilo, sorriso...) in stile model-sheet da studio, a scelta solo viso o full body, usando il workflow attivo per restare coerenti col volto/corpo di riferimento.";

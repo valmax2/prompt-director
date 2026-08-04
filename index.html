@@ -45,6 +45,7 @@
   <button class="tab-btn" data-tab="tab-providers" role="tab" aria-selected="false">IA Esterne</button>
   <button class="tab-btn" data-tab="tab-workflows" role="tab" aria-selected="false">Workflow</button>
   <button class="tab-btn" data-tab="tab-characters" role="tab" aria-selected="false">Personaggi</button>
+  <button class="tab-btn" data-tab="tab-charsheet" role="tab" aria-selected="false">🪪 Scheda Personaggio</button>
   <button class="tab-btn" data-tab="tab-prompt" role="tab" aria-selected="false">Crea Scena</button>
   <button class="tab-btn" data-tab="tab-archive" role="tab" aria-selected="false">Archivio</button>
   <button class="tab-btn" data-tab="tab-backup" role="tab" aria-selected="false">☁️ Backup</button>
@@ -240,6 +241,30 @@
       </div>
     </div>
     <div id="character-grid" class="card-grid"></div>
+  </section>
+
+  <!-- CHARACTER SHEET -->
+  <section id="tab-charsheet" class="tab-panel">
+    <h2>🪪 Scheda Personaggio</h2>
+    <p class="hint">Genera automaticamente 6 immagini dello stesso personaggio da angolazioni diverse (tipo scheda/model sheet da studio: fronte, 3/4, profilo, ecc.), utili come riferimento completo. Usa il workflow attivo nella scheda Workflow e le foto del personaggio scelto per mantenere la coerenza.</p>
+    <p class="hint small">La risoluzione reale dipende dal nodo "Risoluzione" mappato nel workflow e dal modello usato: qui viene richiesta la massima definizione compatibile, ma un vero upscale oltre la risoluzione nativa del modello richiede un nodo di upscale nel workflow stesso.</p>
+    <div class="card form-grid">
+      <label>Personaggio
+        <select id="charsheet-character-select"></select>
+      </label>
+      <div class="full">
+        <span class="picker-field-label">Tipo scheda</span>
+        <div class="checkbox-group">
+          <label class="checkbox-inline"><input type="radio" name="charsheet-mode" value="face" checked> Solo viso</label>
+          <label class="checkbox-inline"><input type="radio" name="charsheet-mode" value="fullbody"> Full body</label>
+        </div>
+      </div>
+      <div class="full form-actions">
+        <button type="button" id="charsheet-generate-btn" class="btn success">🪄 Genera scheda (6 immagini)</button>
+      </div>
+      <div class="full status-box" id="charsheet-status"></div>
+    </div>
+    <div id="charsheet-grid" class="card-grid"></div>
   </section>
 
   <!-- CREA SCENA (flusso unico: personaggio → scena → regia → genera) -->

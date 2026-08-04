@@ -3,6 +3,7 @@ import { getConnectionSettings, saveConnectionSettings, clearConnectionSettings,
 import { ComfyUIClient, ComfyUIError } from "./comfyui.js";
 import { initWorkflows } from "./workflows.js";
 import { initCharacters } from "./characters.js";
+import { initCharacterSheet } from "./charactersheet.js";
 import { initPrompts } from "./prompts.js";
 import { initDirector } from "./director.js";
 import { initArchive } from "./archive.js";
@@ -137,6 +138,7 @@ async function init() {
   initModelInventory();
   await initWorkflows();
   await initCharacters();
+  initCharacterSheet();
   initPrompts();
   initDirector();
   initScenes();
