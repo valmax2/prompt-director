@@ -13,6 +13,7 @@ import { APP_VERSION, APP_VERSION_LABEL, APP_VERSION_NOTES } from "./version.js"
 import { initPickerModal } from "./picker-modal.js";
 import { initModelInventory } from "./models.js";
 import { initBackup } from "./backup.js";
+import { initVoiceGuide, announceTab } from "./voiceguide.js";
 
 function switchTab(tabId) {
   qsa(".tab-btn").forEach((btn) => {
@@ -22,6 +23,7 @@ function switchTab(tabId) {
   });
   qsa(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.id === tabId));
   window.scrollTo({ top: 0, behavior: "smooth" });
+  announceTab(tabId);
 }
 
 function initTabs() {
@@ -144,6 +146,7 @@ async function init() {
   initScenes();
   await initArchive();
   initBackup();
+  initVoiceGuide();
 }
 
 init().catch((err) => {

@@ -3,6 +3,8 @@ const ACTIVE_WORKFLOW_KEY = "comic-studio:active-workflow";
 const GENERATION_MODE_KEY = "comic-studio:generation-mode";
 const ACTIVE_PROVIDER_KEY = "comic-studio:active-provider";
 const PROVIDERS_KEY = "comic-studio:providers";
+const VOICE_GUIDE_ENABLED_KEY = "comic-studio:voice-guide-enabled";
+const VOICE_GUIDE_VOICE_KEY = "comic-studio:voice-guide-voice";
 
 const listeners = new Set();
 
@@ -95,4 +97,28 @@ export function clearProviderSettings(provider) {
   delete all[provider];
   localStorage.setItem(PROVIDERS_KEY, JSON.stringify(all));
   notify("provider-settings-updated", { provider, settings: null });
+}
+
+// --- Voice guide: reads aloud what each page/tab lets you do, opt-in ---
+
+export function getVoiceGuideEnabled() {
+  return localStorage.getItem(VOICE_GUIDE_ENABLED_KEY) === "true";
+}
+
+export function setVoiceGuideEnabled(enabled) {
+  localStorage.setItem(VOICE_GUIDE_ENABLED_KEY, enabled ? "true" : "false");
+  notify("voice-guide-enabled-updated", enabled);
+}
+
+// Stores the chosen voice by its (browser-assigned) name, since
+// SpeechSynthesisVoice objects themselves aren't serializable/stable across
+// reloads — empty string means "browser default".
+export function getVoiceGuideVoiceName() {
+  return localStorage.getItem(VOICE_GUIDE_VOICE_KEY) || "";
+}
+
+export function setVoiceGuideVoiceName(name) {
+  if (name) localStorage.setItem(VOICE_GUIDE_VOICE_KEY, name);
+  else localStorage.removeItem(VOICE_GUIDE_VOICE_KEY);
+  notify("voice-guide-voice-updated", name);
 }

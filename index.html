@@ -49,6 +49,7 @@
   <button class="tab-btn" data-tab="tab-prompt" role="tab" aria-selected="false">Crea Scena</button>
   <button class="tab-btn" data-tab="tab-archive" role="tab" aria-selected="false">Archivio</button>
   <button class="tab-btn" data-tab="tab-backup" role="tab" aria-selected="false">☁️ Backup</button>
+  <button class="tab-btn" data-tab="tab-options" role="tab" aria-selected="false">⚙️ Opzioni</button>
 </nav>
 
 <main class="tab-panels">
@@ -545,6 +546,26 @@
       </div>
       <p class="hint small">La sincronizzazione automatica parte da sola in background dopo ogni nuovo personaggio, flusso o immagine, se sei connesso. "Sincronizza ora" forza subito un controllo completo — utile appena apri l'app su un altro dispositivo, per scaricare quanto salvato altrove.</p>
       <p class="status-box" id="backup-status"></p>
+    </div>
+  </section>
+
+  <!-- OPTIONS -->
+  <section id="tab-options" class="tab-panel">
+    <h2>⚙️ Opzioni</h2>
+    <div class="card">
+      <h3 class="step-title">🔊 Guida vocale</h3>
+      <p class="hint">Quando è attiva, ogni volta che apri una scheda una voce ti spiega a voce cosa puoi fare in quella pagina — utile come aiuto passo-passo mentre usi l'app, senza dover leggere tutto tu stesso. Funziona offline con la sintesi vocale del browser, senza API key.</p>
+      <label class="checkbox-row">
+        <input type="checkbox" id="voice-guide-toggle">
+        Attiva la guida vocale
+      </label>
+      <label>Voce
+        <select id="voice-guide-voice-select"></select>
+      </label>
+      <div class="form-actions">
+        <button type="button" id="voice-guide-repeat-btn" class="btn small">🔁 Ripeti la guida di questa pagina</button>
+      </div>
+      <p class="hint small error" id="voice-guide-unsupported" hidden>Il tuo browser non supporta la sintesi vocale (Web Speech API): questa funzione non è disponibile qui.</p>
     </div>
   </section>
 
