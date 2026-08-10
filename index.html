@@ -33,9 +33,15 @@
       <button type="button" class="mode-btn" id="mode-local-btn" data-mode="local">🖥️ ComfyUI locale</button>
       <button type="button" class="mode-btn" id="mode-external-btn" data-mode="external">☁️ IA Esterna</button>
     </div>
-    <div class="connection-badge" id="connection-badge">
-      <span class="dot" id="connection-dot"></span>
-      <span id="connection-label">Non connesso</span>
+    <div class="header-right-row">
+      <div class="connection-badge" id="connection-badge">
+        <span class="dot" id="connection-dot"></span>
+        <span id="connection-label">Non connesso</span>
+      </div>
+      <!-- Deliberately outside the scrollable tab bar, so it's always
+           reachable without scrolling sideways to find it — Opzioni isn't
+           part of the step-by-step flow, it's a persistent utility. -->
+      <button type="button" id="header-options-btn" class="icon-btn" title="Opzioni" aria-label="Opzioni">⚙️</button>
     </div>
   </div>
 </header>
@@ -49,7 +55,6 @@
   <button class="tab-btn" data-tab="tab-prompt" role="tab" aria-selected="false">Crea Scena</button>
   <button class="tab-btn" data-tab="tab-archive" role="tab" aria-selected="false">Archivio</button>
   <button class="tab-btn" data-tab="tab-backup" role="tab" aria-selected="false">☁️ Backup</button>
-  <button class="tab-btn" data-tab="tab-options" role="tab" aria-selected="false">⚙️ Opzioni</button>
 </nav>
 
 <main class="tab-panels">

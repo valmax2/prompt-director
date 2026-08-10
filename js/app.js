@@ -22,6 +22,9 @@ function switchTab(tabId) {
     btn.setAttribute("aria-selected", String(active));
   });
   qsa(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.id === tabId));
+  // Opzioni has no entry in the scrollable tab bar (see header-options-btn
+  // in index.html) — it needs its own active indicator instead.
+  qs("#header-options-btn")?.classList.toggle("active", tabId === "tab-options");
   window.scrollTo({ top: 0, behavior: "smooth" });
   announceTab(tabId);
 }
@@ -30,6 +33,7 @@ function initTabs() {
   qsa(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
+  qs("#header-options-btn")?.addEventListener("click", () => switchTab("tab-options"));
   window.addEventListener("request-tab", (e) => switchTab(e.detail));
 }
 

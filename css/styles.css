@@ -49,6 +49,27 @@ body {
   gap: 10px;
   flex-wrap: wrap;
 }
+.header-right-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: #232946; }
+.icon-btn.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
 .mode-switch {
   display: flex;
@@ -107,14 +128,21 @@ body {
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  /* A visible scrollbar + a bit of drag-friction is the only hint on touch
+     devices that there are more tabs off to the right — without it the row
+     just looks like it stops, which reads as "the rest is missing". */
+  scrollbar-width: thin;
 }
 .tab-btn {
   background: none;
   border: none;
-  color: var(--text-dim);
-  padding: 14px 20px;
-  font-size: 16px;
-  min-height: 48px;
+  /* Brighter than --text-dim: on a crowded, small-screen tab row that's
+     the one place low contrast most directly reads as "hard to read". */
+  color: #b7bce6;
+  padding: 15px 20px;
+  font-size: 17px;
+  font-weight: 500;
+  min-height: 50px;
   cursor: pointer;
   border-bottom: 3px solid transparent;
   white-space: nowrap;
@@ -123,7 +151,7 @@ body {
 .tab-btn.active {
   color: var(--text);
   border-bottom-color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .tab-panels { padding: 24px; max-width: 1100px; margin: 0 auto; }
@@ -592,3 +620,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .picker-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-dim); }
 .picker-field-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .picker-current-value { color: var(--text); font-weight: 600; font-size: 14px; }
+
+/* On a phone-width screen the header used to squeeze brand + mode switch +
+   connection badge into one row that either wrapped mid-button or shrank
+   everything down to barely tappable — stacking it top-to-bottom instead
+   gives every control its own full-width row with a real touch target. */
+@media (max-width: 640px) {
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .header-right { flex-direction: column; align-items: stretch; gap: 10px; }
+  .mode-switch { width: 100%; }
+  .mode-btn { flex: 1; padding: 12px 10px; font-size: 14px; }
+  .header-right-row { justify-content: space-between; }
+  .connection-badge { flex: 1; justify-content: center; }
+
+  .tabs { padding: 6px 12px 0; }
+  .tab-btn { padding: 13px 16px; font-size: 16px; }
+
+  .tab-panels { padding: 16px; }
+}
