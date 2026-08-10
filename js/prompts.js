@@ -1,5 +1,6 @@
 import { qs, qsa, el, toast, copyToClipboard, uid, thumbWithPrivacyToggle } from "./utils.js";
 import { translateItToEn, optimizePrompt, tagify, DEFAULT_NEGATIVE_EN } from "./translate.js";
+import { optimizeForAiAcceptance, optimizeForCopyrightSafety } from "./promptsafety.js";
 import { listCharacters, getCharacterById, setCharacterVisibility } from "./characters.js";
 import { getActiveWorkflow } from "./workflows.js";
 import { getConnectionSettings, getGenerationMode, getActiveProvider, getProviderSettings, onStateChange } from "./state.js";
@@ -614,6 +615,47 @@ async function handleTranslate() {
   }
 }
 
+// Both rewrite the STORED English text (lastSceneEn/lastCharacterDescEn),
+// not the rendered #prompt-output-en directly — anything that later calls
+// rebuildOutputs() (style change, director tags, quality checkboxes...)
+// fully recomputes that field from those two variables, so an edit made
+// only to the rendered textarea would silently vanish on the next tweak.
+function handleAvoidRefusal() {
+  if (lastSceneEn === null) {
+    toast("Traduci prima il prompt (Traduci & Ottimizza).", "error");
+    return;
+  }
+  const scene = optimizeForAiAcceptance(lastSceneEn);
+  const desc = optimizeForAiAcceptance(lastCharacterDescEn);
+  lastSceneEn = scene.text;
+  lastCharacterDescEn = desc.text;
+  rebuildOutputs();
+  const matched = scene.matched || desc.matched;
+  toast(
+    matched ? "Prompt riformulato per ridurre i rifiuti dell'IA." : "Nessun termine problematico trovato: prompt lasciato invariato.",
+    matched ? "success" : "info"
+  );
+}
+
+function handleCopyrightSafe() {
+  if (lastSceneEn === null) {
+    toast("Traduci prima il prompt (Traduci & Ottimizza).", "error");
+    return;
+  }
+  const scene = optimizeForCopyrightSafety(lastSceneEn);
+  const desc = optimizeForCopyrightSafety(lastCharacterDescEn);
+  lastSceneEn = scene.text;
+  lastCharacterDescEn = desc.text;
+  rebuildOutputs();
+  const matched = scene.matched || desc.matched;
+  toast(
+    matched
+      ? "Personaggio protetto sostituito con una descrizione simile ma generica."
+      : "Nessun personaggio protetto riconosciuto: se l'IA rifiuta comunque, prova a descriverne l'aspetto invece del nome.",
+    matched ? "success" : "info"
+  );
+}
+
 async function handleCopy(sourceId, label) {
   const value = qs(`#${sourceId}`).value;
   if (!value) {
@@ -922,6 +964,8 @@ export async function initPrompts() {
   updateModeIndicator();
 
   qs("#prompt-translate-btn").addEventListener("click", handleTranslate);
+  qs("#prompt-avoid-refusal-btn").addEventListener("click", handleAvoidRefusal);
+  qs("#prompt-copyright-safe-btn").addEventListener("click", handleCopyrightSafe);
   qs("#prompt-reset-btn").addEventListener("click", resetPromptForm);
   qs("#prompt-copy-btn").addEventListener("click", () => handleCopy("prompt-output-en", "Prompt"));
   qs("#prompt-copy-neg-btn").addEventListener("click", () => handleCopy("prompt-output-neg-en", "Prompt negativo"));
