@@ -1,4 +1,4 @@
-import { qs, qsa, el, toast, copyToClipboard, uid, thumbWithPrivacyToggle } from "./utils.js";
+import { qs, qsa, el, toast, copyToClipboard, copyImageToClipboard, uid, thumbWithPrivacyToggle } from "./utils.js";
 import { translateItToEn, optimizePrompt, tagify, DEFAULT_NEGATIVE_EN } from "./translate.js";
 import { optimizeForAiAcceptance, optimizeForCopyrightSafety } from "./promptsafety.js";
 import { listCharacters, getCharacterById, setCharacterVisibility } from "./characters.js";
@@ -556,6 +556,7 @@ async function renderCharacterSlots() {
           renderMappingSummary();
           saveDraft();
           renderCharacterSlotPreview(previewDiv, select.value);
+          renderCopyReferenceButtons();
         },
       },
       [el("option", { value: "" }, "— nessuno —"), ...listCharacters().map((c) => el("option", { value: c.id }, c.name))]
@@ -574,6 +575,61 @@ async function renderCharacterSlots() {
 
   updateCharacterHint();
   renderMappingSummary();
+  renderCopyReferenceButtons();
+}
+
+// "Copia foto riferimento" buttons for Opzione B (copy-and-paste generation,
+// step 5) — one per currently-selected character slot, so the exact same
+// reference image ComfyUI would have used is one tap away to paste into an
+// external AI's chat, without a detour to the Personaggi tab. Pose slots are
+// skipped: that file came straight from the user's own upload, so they
+// already have it.
+let copyReferenceRenderToken = 0;
+async function renderCopyReferenceButtons() {
+  const container = qs("#prompt-copy-reference-list");
+  if (!container) return;
+
+  // Multiple slot dropdowns can fire "change" in quick succession (e.g. two
+  // slots defaulting/updating together) — each triggers its own call to this
+  // async function. Without this token, an earlier call's awaits could still
+  // be resolving when a newer call finishes and clears+rebuilds the
+  // container first, so the earlier call's leftover appends land afterwards
+  // on top of it, doubling up buttons. A superseded call just bails instead.
+  const token = ++copyReferenceRenderToken;
+  const idsByIndex = getSelectedCharacterIdsByIndex();
+  const entries = [];
+  for (let index = 0; index < characterSlotDefs.length; index++) {
+    const slot = characterSlotDefs[index];
+    if (slot.source === "pose") continue;
+    const characterId = idsByIndex[index];
+    if (!characterId) continue;
+    const character = await getCharacterById(characterId);
+    if (token !== copyReferenceRenderToken) return; // a newer call took over meanwhile
+    if (!character) continue;
+    const useIdentityBlob = slot.source === "identity" && !!character.identityBlob;
+    entries.push({ label: characterSlotDefs.length > 1 ? slot.label : "foto riferimento", blob: useIdentityBlob ? character.identityBlob : character.blob });
+  }
+  if (token !== copyReferenceRenderToken) return;
+
+  container.innerHTML = "";
+  if (entries.length === 0) {
+    container.appendChild(el("p", { class: "hint small" }, "Scegli un personaggio al passo 1 per poter copiare qui la sua foto."));
+    return;
+  }
+  for (const entry of entries) {
+    container.appendChild(
+      el(
+        "button",
+        { type: "button", class: "btn small", onclick: () => handleCopyReferenceImage(entry.blob, entry.label) },
+        `📋 Copia ${entry.label}`
+      )
+    );
+  }
+}
+
+async function handleCopyReferenceImage(blob, label) {
+  const ok = await copyImageToClipboard(blob);
+  toast(ok ? `Foto (${label}) copiata: incollala nell'IA.` : "Copia immagine non riuscita (browser non supportato).", ok ? "success" : "error");
 }
 
 function setSendStatus(message, type = "") {
