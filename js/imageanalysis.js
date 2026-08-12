@@ -1,7 +1,7 @@
-import { qs, el, toast, copyToClipboard, createObjectUrlTracker } from "./utils.js";
-import { getProviderSettings } from "./state.js";
+import { qs, el, toast, copyToClipboard, copyImageToClipboard, createObjectUrlTracker } from "./utils.js";
+import { getProviderSettings, getActiveProvider } from "./state.js";
 import { listCharacters, getCharacterById } from "./characters.js";
-import { blobToBase64, readErrorText, ProviderError } from "./providers.js";
+import { blobToBase64, readErrorText, getProviderMeta, ProviderError } from "./providers.js";
 import { loadPromptFromExternalText } from "./prompts.js";
 
 // Uses Gemini's vision understanding, not its image-generation endpoint —
@@ -95,6 +95,28 @@ function renderReferenceOptions() {
   }
 }
 
+// Shared by the automatic (API) path and the manual copy-paste path below,
+// so both end up populating the result exactly the same way — including
+// the deterministic identity note, which must apply regardless of whether
+// the description came back from our own fetch() call or was typed/pasted
+// in by the user from an external AI's chat.
+function applyAnalysisResult(rawDescription, referenceCharacter) {
+  const finalText = referenceCharacter ? `${rawDescription}, ${identityNoteFor(referenceCharacter.name)}` : rawDescription;
+  qs("#imganalysis-output").value = finalText;
+  qs("#imganalysis-result-card").hidden = false;
+  qs("#imganalysis-use-btn").dataset.referenceCharacterId = referenceCharacter?.id || "";
+}
+
+// null whenever the toggle is off OR nothing is picked yet — callers that
+// need a selection to proceed check for that themselves; this just resolves
+// whatever's currently chosen without deciding whether that's valid.
+async function resolveReferenceCharacter() {
+  if (!qs("#imganalysis-reference-toggle").checked) return null;
+  const characterId = qs("#imganalysis-reference-select").value;
+  if (!characterId) return null;
+  return getCharacterById(characterId);
+}
+
 async function handleAnalyze() {
   if (!sourceFile) {
     setStatus("Carica prima un'immagine da analizzare.", "error");
@@ -102,23 +124,19 @@ async function handleAnalyze() {
   }
   const settings = getProviderSettings("gemini");
   if (!settings?.apiKey) {
-    setStatus("Inserisci la API key di Google Gemini nella scheda 'IA Esterne' (usata solo per analizzare, non per generare).", "error");
+    setStatus("Inserisci la API key di Google Gemini nella scheda 'IA Esterne' (usata solo per analizzare, non per generare) — oppure usa l'opzione senza API qui sotto.", "error");
     return;
   }
 
   const referenceActive = qs("#imganalysis-reference-toggle").checked;
-  let referenceCharacter = null;
-  if (referenceActive) {
-    const characterId = qs("#imganalysis-reference-select").value;
-    if (!characterId) {
-      setStatus("Scegli un personaggio di riferimento, oppure disattiva l'opzione.", "error");
-      return;
-    }
-    referenceCharacter = await getCharacterById(characterId);
-    if (!referenceCharacter) {
-      setStatus("Personaggio di riferimento non trovato.", "error");
-      return;
-    }
+  if (referenceActive && !qs("#imganalysis-reference-select").value) {
+    setStatus("Scegli un personaggio di riferimento, oppure disattiva l'opzione.", "error");
+    return;
+  }
+  const referenceCharacter = await resolveReferenceCharacter();
+  if (referenceActive && !referenceCharacter) {
+    setStatus("Personaggio di riferimento non trovato.", "error");
+    return;
   }
 
   const btn = qs("#imganalysis-run-btn");
@@ -127,12 +145,8 @@ async function handleAnalyze() {
 
   try {
     const referenceBlob = referenceCharacter ? referenceCharacter.identityBlob || referenceCharacter.blob : null;
-    let description = await analyzeImageToPrompt({ apiKey: settings.apiKey, imageBlob: sourceFile, referenceBlob });
-    if (referenceCharacter) description = `${description}, ${identityNoteFor(referenceCharacter.name)}`;
-
-    qs("#imganalysis-output").value = description;
-    qs("#imganalysis-result-card").hidden = false;
-    qs("#imganalysis-use-btn").dataset.referenceCharacterId = referenceCharacter?.id || "";
+    const description = await analyzeImageToPrompt({ apiKey: settings.apiKey, imageBlob: sourceFile, referenceBlob });
+    applyAnalysisResult(description, referenceCharacter);
     setStatus("✅ Analisi completata.", "ok");
     toast("Prompt generato dall'immagine.", "success");
   } catch (err) {
@@ -158,6 +172,62 @@ function handleUseInScene() {
   loadPromptFromExternalText(text, { referenceCharacterId });
 }
 
+// --- Opzione senza API: copy the instructions + image(s), paste manually
+// into any chat-based AI, paste its reply back here. ---
+
+function handleOpenProvider() {
+  const meta = getProviderMeta(getActiveProvider());
+  if (meta?.consumerAppUrl) window.open(meta.consumerAppUrl, "_blank", "noopener");
+}
+
+async function handleCopyInstructions() {
+  const referenceActive = qs("#imganalysis-reference-toggle").checked;
+  const text = referenceActive ? `${BASE_INSTRUCTION}${REFERENCE_INSTRUCTION}` : BASE_INSTRUCTION;
+  const ok = await copyToClipboard(text);
+  toast(ok ? "Istruzioni copiate: incollale nell'IA insieme all'immagine." : "Copia non riuscita.", ok ? "success" : "error");
+}
+
+async function handleCopySourceImage() {
+  if (!sourceFile) {
+    toast("Carica prima un'immagine da analizzare.", "error");
+    return;
+  }
+  const ok = await copyImageToClipboard(sourceFile);
+  toast(ok ? "Immagine copiata: incollala nell'IA." : "Copia immagine non riuscita (browser non supportato).", ok ? "success" : "error");
+}
+
+async function handleCopyReferenceImageForNoApi() {
+  const character = await resolveReferenceCharacter();
+  if (!character) {
+    toast("Attiva l'opzione e scegli un personaggio di riferimento prima.", "error");
+    return;
+  }
+  const ok = await copyImageToClipboard(character.identityBlob || character.blob);
+  toast(ok ? "Foto di riferimento copiata: incollala anche lei nell'IA." : "Copia immagine non riuscita.", ok ? "success" : "error");
+}
+
+async function handleUseManualText() {
+  const text = qs("#imganalysis-noapi-paste").value.trim();
+  if (!text) {
+    toast("Incolla prima il testo che l'IA ti ha restituito.", "error");
+    return;
+  }
+  const referenceActive = qs("#imganalysis-reference-toggle").checked;
+  if (referenceActive && !qs("#imganalysis-reference-select").value) {
+    toast("Scegli un personaggio di riferimento, oppure disattiva l'opzione.", "error");
+    return;
+  }
+  const referenceCharacter = await resolveReferenceCharacter();
+  applyAnalysisResult(text, referenceCharacter);
+  setStatus("✅ Prompt caricato dal testo incollato.", "ok");
+  toast("Prompt pronto.", "success");
+}
+
+function updateNoApiReferenceButtonVisibility() {
+  const btn = qs("#imganalysis-noapi-copy-reference-btn");
+  if (btn) btn.hidden = !qs("#imganalysis-reference-toggle").checked;
+}
+
 export function initImageAnalysis() {
   renderReferenceOptions();
 
@@ -168,11 +238,18 @@ export function initImageAnalysis() {
 
   qs("#imganalysis-reference-toggle").addEventListener("change", (e) => {
     qs("#imganalysis-reference-picker-wrap").hidden = !e.target.checked;
+    updateNoApiReferenceButtonVisibility();
   });
 
   qs("#imganalysis-run-btn").addEventListener("click", handleAnalyze);
   qs("#imganalysis-copy-btn").addEventListener("click", handleCopy);
   qs("#imganalysis-use-btn").addEventListener("click", handleUseInScene);
+
+  qs("#imganalysis-noapi-open-btn").addEventListener("click", handleOpenProvider);
+  qs("#imganalysis-noapi-copy-instructions-btn").addEventListener("click", handleCopyInstructions);
+  qs("#imganalysis-noapi-copy-image-btn").addEventListener("click", handleCopySourceImage);
+  qs("#imganalysis-noapi-copy-reference-btn").addEventListener("click", handleCopyReferenceImageForNoApi);
+  qs("#imganalysis-noapi-use-btn").addEventListener("click", handleUseManualText);
 
   window.addEventListener("characters-updated", renderReferenceOptions);
 }

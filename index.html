@@ -288,7 +288,7 @@
   <!-- IMAGE -> PROMPT -->
   <section id="tab-imageanalysis" class="tab-panel">
     <h2>🔎 Immagine → Prompt</h2>
-    <p class="hint">Carica un'immagine: la analizzo con l'IA e genero un prompt inglese dettagliato per ricrearla il più fedelmente possibile (soggetto, posa, sfondo, luce, stile, colori...). Richiede una API key di Google Gemini in "IA Esterne" — usata solo per analizzare l'immagine, non per generarla.</p>
+    <p class="hint">Carica un'immagine: la analizzo con l'IA e genero un prompt inglese dettagliato per ricrearla il più fedelmente possibile (soggetto, posa, sfondo, luce, stile, colori...). Con API key di Google Gemini in "IA Esterne" lo fa in automatico qui sotto; senza API key usa l'opzione copia-e-incolla più in basso.</p>
     <div class="card form-grid">
       <label class="full">Immagine da analizzare
         <input type="file" id="imganalysis-upload" accept="image/*">
@@ -303,10 +303,28 @@
         <span class="hint small">Il prompt generato includerà una nota esplicita: il personaggio nell'immagine è quello di riferimento, la sua identità va mantenuta senza stravolgerla.</span>
       </label>
       <div class="full form-actions">
-        <button type="button" id="imganalysis-run-btn" class="btn success">🔍 Analizza immagine</button>
+        <button type="button" id="imganalysis-run-btn" class="btn success">🔍 Analizza immagine (con API Gemini)</button>
       </div>
       <div class="full status-box" id="imganalysis-status"></div>
     </div>
+
+    <div class="card">
+      <h3 class="step-title">Opzione senza API — copia e incolla</h3>
+      <p class="hint small">Nessuna API key richiesta: usa il sito/app che hai già (es. ChatGPT Plus, Gemini). Apri l'IA, incolla le istruzioni copiate, poi l'immagine (e la foto di riferimento, se attiva) — infine incolla qui sotto la descrizione che ti restituisce.</p>
+      <div class="form-actions">
+        <button type="button" id="imganalysis-noapi-open-btn" class="btn primary">🔗 Apri IA</button>
+        <button type="button" id="imganalysis-noapi-copy-instructions-btn" class="btn small">📋 Copia istruzioni</button>
+        <button type="button" id="imganalysis-noapi-copy-image-btn" class="btn small">📋 Copia immagine</button>
+        <button type="button" id="imganalysis-noapi-copy-reference-btn" class="btn small" hidden>📋 Copia foto riferimento</button>
+      </div>
+      <label class="full">Incolla qui la descrizione ricevuta dall'IA
+        <textarea id="imganalysis-noapi-paste" rows="4" placeholder="Incolla qui il testo che l'IA ti ha restituito..."></textarea>
+      </label>
+      <div class="form-actions">
+        <button type="button" id="imganalysis-noapi-use-btn" class="btn success">✅ Usa questo testo come prompt</button>
+      </div>
+    </div>
+
     <div class="card" id="imganalysis-result-card" hidden>
       <div class="output-header">
         <h3>Prompt generato (EN)</h3>
