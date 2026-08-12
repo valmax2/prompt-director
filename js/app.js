@@ -4,7 +4,6 @@ import { ComfyUIClient, ComfyUIError } from "./comfyui.js";
 import { initWorkflows } from "./workflows.js";
 import { initCharacters } from "./characters.js";
 import { initCharacterSheet } from "./charactersheet.js";
-import { initImageAnalysis } from "./imageanalysis.js";
 import { initPrompts } from "./prompts.js";
 import { initDirector } from "./director.js";
 import { initArchive } from "./archive.js";
@@ -15,6 +14,7 @@ import { initPickerModal } from "./picker-modal.js";
 import { initModelInventory } from "./models.js";
 import { initBackup } from "./backup.js";
 import { initVoiceGuide, announceTab } from "./voiceguide.js";
+import { initGuide } from "./guide.js";
 
 function switchTab(tabId) {
   qsa(".tab-btn").forEach((btn) => {
@@ -138,6 +138,7 @@ function initVersionLabel() {
 async function init() {
   initVersionLabel();
   initPickerModal();
+  initGuide();
   initTabs();
   initModeSwitch();
   initConnection();
@@ -147,7 +148,6 @@ async function init() {
   await initCharacters();
   initCharacterSheet();
   initPrompts();
-  initImageAnalysis();
   initDirector();
   initScenes();
   await initArchive();

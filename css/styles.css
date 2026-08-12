@@ -250,8 +250,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 
 .pose-preview-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 
-.imganalysis-preview-thumb { max-width: 260px; max-height: 260px; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 8px; }
-
 .char-slot-preview:empty { display: none; }
 .char-slot-preview { margin-top: 8px; width: 96px; }
 .char-slot-preview img, .char-slot-preview video { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); background: #0b0e1c; display: block; }
@@ -622,6 +620,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .picker-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-dim); }
 .picker-field-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .picker-current-value { color: var(--text); font-weight: 600; font-size: 14px; }
+
+/* Landing "Guida" page: the voice-guide callout is meant to stand out from
+   the plain feature cards below it, per the whole point of putting it here
+   — "ben visibile all'inizio". */
+.guide-callout { border: 1px solid var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.guide-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.guide-card { display: flex; flex-direction: column; gap: 8px; }
+.guide-card p { flex: 1; margin: 0; color: var(--text-dim); font-size: 13px; }
+.guide-card .btn { align-self: flex-start; }
 
 /* On a phone-width screen the header used to squeeze brand + mode switch +
    connection badge into one row that either wrapped mid-button or shrank

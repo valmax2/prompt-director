@@ -47,12 +47,12 @@
 </header>
 
 <nav class="tabs" id="tabs" role="tablist">
-  <button class="tab-btn active" data-tab="tab-connection" role="tab" aria-selected="true">Connessione ComfyUI</button>
+  <button class="tab-btn active" data-tab="tab-guide" role="tab" aria-selected="true">📖 Guida</button>
+  <button class="tab-btn" data-tab="tab-connection" role="tab" aria-selected="false">Connessione ComfyUI</button>
   <button class="tab-btn" data-tab="tab-providers" role="tab" aria-selected="false">IA Esterne</button>
   <button class="tab-btn" data-tab="tab-workflows" role="tab" aria-selected="false">Workflow</button>
   <button class="tab-btn" data-tab="tab-characters" role="tab" aria-selected="false">Personaggi</button>
   <button class="tab-btn" data-tab="tab-charsheet" role="tab" aria-selected="false">🪪 Scheda Personaggio</button>
-  <button class="tab-btn" data-tab="tab-imageanalysis" role="tab" aria-selected="false">🔎 Immagine→Prompt</button>
   <button class="tab-btn" data-tab="tab-prompt" role="tab" aria-selected="false">Crea Scena</button>
   <button class="tab-btn" data-tab="tab-archive" role="tab" aria-selected="false">Archivio</button>
   <button class="tab-btn" data-tab="tab-backup" role="tab" aria-selected="false">☁️ Backup</button>
@@ -60,8 +60,70 @@
 
 <main class="tab-panels">
 
+  <!-- GUIDE (landing page) -->
+  <section id="tab-guide" class="tab-panel active">
+    <h2>📖 Guida rapida — Comic Studio</h2>
+    <p class="hint">Panoramica di tutte le funzioni dell'app. Tocca "Vai →" su una scheda per aprirla direttamente.</p>
+
+    <div class="card guide-callout">
+      <h3 class="step-title">🔊 Assistente vocale</h3>
+      <p>Attiva la guida vocale e, ogni volta che apri una scheda, una voce ti spiegherà a parole cosa puoi fare in quella pagina — un aiuto passo-passo mentre usi l'app, senza dover leggere tutto tu stesso. Funziona offline, nessuna API key.</p>
+      <div class="form-actions">
+        <button type="button" class="btn primary" data-goto-tab="tab-options">⚙️ Vai a Opzioni per attivarla</button>
+      </div>
+    </div>
+
+    <div class="card-grid guide-grid">
+      <div class="card guide-card">
+        <h3 class="step-title">🖥️ Connessione ComfyUI</h3>
+        <p>Collega l'app al tuo ComfyUI in rete locale: indirizzo IP, porta, e se serve utente/password.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-connection">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">☁️ IA Esterne</h3>
+        <p>Inserisci le API key di Google Gemini, OpenAI o Leonardo.ai per generare immagini senza ComfyUI.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-providers">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">🧩 Workflow</h3>
+        <p>Carica i tuoi flussi ComfyUI, mappa i nodi (prompt, seme, risoluzione, immagini) e controlla quali modelli sono compatibili.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-workflows">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">🧑‍🎤 Personaggi</h3>
+        <p>Il tuo archivio personaggi: carica foto, scatta una foto, nascondi le immagini private con l'icona 👁️.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-characters">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">🪪 Scheda Personaggio</h3>
+        <p>Genera in automatico 6 immagini di un personaggio salvato da angolazioni diverse, solo viso o figura intera.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-charsheet">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">🎬 Crea Scena</h3>
+        <p>Il flusso principale: scegli il personaggio, scrivi la scena, imposta la camera con la regia, traduci e genera.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-prompt">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">🗂️ Archivio</h3>
+        <p>Tutte le immagini generate finora: nascondile per privacy, attivale per il progetto corrente, scaricale.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-archive">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">☁️ Backup</h3>
+        <p>Collega il tuo Google Drive per salvare automaticamente personaggi, flussi e immagini, e ritrovarli su un altro dispositivo.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-backup">Vai →</button>
+      </div>
+      <div class="card guide-card">
+        <h3 class="step-title">⚙️ Opzioni</h3>
+        <p>Attiva/disattiva la guida vocale e scegli quale voce usare.</p>
+        <button type="button" class="btn small" data-goto-tab="tab-options">Vai →</button>
+      </div>
+    </div>
+  </section>
+
   <!-- CONNECTION -->
-  <section id="tab-connection" class="tab-panel active">
+  <section id="tab-connection" class="tab-panel">
     <h2>Connessione a ComfyUI</h2>
     <p class="hint">Configura l'indirizzo della tua istanza locale di ComfyUI. I dati restano solo su questo browser (localStorage).</p>
     <form id="connection-form" class="card form-grid">
@@ -282,58 +344,6 @@
         <button type="button" id="charsheet-noapi-copyimg-btn" class="btn small">📋 Copia immagine personaggio</button>
       </div>
       <div id="charsheet-noapi-list" class="card-grid"></div>
-    </div>
-  </section>
-
-  <!-- IMAGE -> PROMPT -->
-  <section id="tab-imageanalysis" class="tab-panel">
-    <h2>🔎 Immagine → Prompt</h2>
-    <p class="hint">Carica un'immagine: la analizzo con l'IA e genero un prompt inglese dettagliato per ricrearla il più fedelmente possibile (soggetto, posa, sfondo, luce, stile, colori...). Con API key di Google Gemini in "IA Esterne" lo fa in automatico qui sotto; senza API key usa l'opzione copia-e-incolla più in basso.</p>
-    <div class="card form-grid">
-      <label class="full">Immagine da analizzare
-        <input type="file" id="imganalysis-upload" accept="image/*">
-      </label>
-      <div class="full" id="imganalysis-preview"></div>
-      <label class="full checkbox-row">
-        <input type="checkbox" id="imganalysis-reference-toggle">
-        Adatta a un personaggio di riferimento (mantieni la sua identità, non stravolgerla)
-      </label>
-      <label class="full" id="imganalysis-reference-picker-wrap" hidden>Personaggio di riferimento
-        <select id="imganalysis-reference-select"></select>
-        <span class="hint small">Il prompt generato includerà una nota esplicita: il personaggio nell'immagine è quello di riferimento, la sua identità va mantenuta senza stravolgerla.</span>
-      </label>
-      <div class="full form-actions">
-        <button type="button" id="imganalysis-run-btn" class="btn success">🔍 Analizza immagine (con API Gemini)</button>
-      </div>
-      <div class="full status-box" id="imganalysis-status"></div>
-    </div>
-
-    <div class="card">
-      <h3 class="step-title">Opzione senza API — copia e incolla</h3>
-      <p class="hint small">Nessuna API key richiesta: usa il sito/app che hai già (es. ChatGPT Plus, Gemini). Apri l'IA, incolla le istruzioni copiate, poi l'immagine (e la foto di riferimento, se attiva) — infine incolla qui sotto la descrizione che ti restituisce.</p>
-      <div class="form-actions">
-        <button type="button" id="imganalysis-noapi-open-btn" class="btn primary">🔗 Apri IA</button>
-        <button type="button" id="imganalysis-noapi-copy-instructions-btn" class="btn small">📋 Copia istruzioni</button>
-        <button type="button" id="imganalysis-noapi-copy-image-btn" class="btn small">📋 Copia immagine</button>
-        <button type="button" id="imganalysis-noapi-copy-reference-btn" class="btn small" hidden>📋 Copia foto riferimento</button>
-      </div>
-      <label class="full">Incolla qui la descrizione ricevuta dall'IA
-        <textarea id="imganalysis-noapi-paste" rows="4" placeholder="Incolla qui il testo che l'IA ti ha restituito..."></textarea>
-      </label>
-      <div class="form-actions">
-        <button type="button" id="imganalysis-noapi-use-btn" class="btn success">✅ Usa questo testo come prompt</button>
-      </div>
-    </div>
-
-    <div class="card" id="imganalysis-result-card" hidden>
-      <div class="output-header">
-        <h3>Prompt generato (EN)</h3>
-        <button id="imganalysis-copy-btn" class="btn small" type="button">📋 Copia</button>
-      </div>
-      <textarea id="imganalysis-output" rows="6" readonly></textarea>
-      <div class="form-actions">
-        <button type="button" id="imganalysis-use-btn" class="btn primary">➡️ Usa in Crea Scena</button>
-      </div>
     </div>
   </section>
 

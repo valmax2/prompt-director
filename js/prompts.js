@@ -712,37 +712,6 @@ function handleCopyrightSafe() {
   );
 }
 
-// Entry point for other modules that produce a ready-made ENGLISH prompt
-// outside this file's own IT->EN translate step (currently: imageanalysis.js's
-// "Immagine → Prompt"). Sets lastSceneEn directly instead of going through
-// translateItToEn — re-translating already-English text would garble it —
-// so all the normal downstream behavior (style/quality/director tags via
-// rebuildOutputs, later edits surviving rebuilds) still applies from here on.
-export function loadPromptFromExternalText(englishText, { referenceCharacterId } = {}) {
-  lastSceneEn = englishText;
-  lastCharacterDescEn = "";
-  lastNegAdditionEn = "";
-  rebuildOutputs();
-
-  let referenceApplied = false;
-  if (referenceCharacterId) {
-    const select = qs('#prompt-character-slots select[data-slot-index="0"]');
-    if (select && [...select.options].some((o) => o.value === referenceCharacterId)) {
-      select.value = referenceCharacterId;
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-      referenceApplied = true;
-    }
-  }
-
-  window.dispatchEvent(new CustomEvent("request-tab", { detail: "tab-prompt" }));
-  toast(
-    referenceApplied
-      ? "Prompt caricato in Crea Scena — personaggio di riferimento selezionato anche al passo 1."
-      : "Prompt caricato in Crea Scena.",
-    "success"
-  );
-}
-
 async function handleCopy(sourceId, label) {
   const value = qs(`#${sourceId}`).value;
   if (!value) {

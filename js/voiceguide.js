@@ -13,6 +13,8 @@ const SpeechSynthesisImpl = window.speechSynthesis;
 // generated from the DOM, so the wording reads naturally out loud instead
 // of listing raw button labels.
 const PAGE_GUIDES = {
+  "tab-guide":
+    "Sei nella Guida rapida, la pagina iniziale dell'app. Qui trovi una panoramica di tutte le funzioni di Comic Studio e un tasto per attivare questa stessa guida vocale nella scheda Opzioni.",
   "tab-connection":
     "Sei nella scheda Connessione ComfyUI. Qui colleghi l'app al tuo ComfyUI in rete locale: inserisci indirizzo IP e porta, se serve anche utente e password, poi premi Connetti per verificare che funzioni.",
   "tab-providers":
@@ -23,8 +25,6 @@ const PAGE_GUIDES = {
     "Sei nella scheda Personaggi. Qui gestisci l'archivio dei tuoi personaggi: carica foto dalla galleria o scatta una foto al momento, rinominali, e tocca l'icona a forma di occhio per nascondere un'immagine privata.",
   "tab-charsheet":
     "Sei nella scheda Scheda Personaggio. Qui scegli un personaggio già salvato e generi in automatico sei immagini da angolazioni diverse, in stile scheda modello da studio, scegliendo se solo il viso o la figura intera.",
-  "tab-imageanalysis":
-    "Sei nella scheda Immagine a Prompt. Qui carichi una foto o un'immagine e l'intelligenza artificiale la analizza per creare un prompt inglese dettagliato che la ricrea fedelmente, con l'opzione di adattarla a un personaggio di riferimento senza stravolgerne l'identità.",
   "tab-prompt":
     "Sei nella scheda Crea Scena. Qui costruisci una scena passo per passo: scegli il personaggio, scrivi la descrizione della scena, imposta la camera con la regia, poi traduci il prompt e genera l'immagine con ComfyUI o con un'intelligenza artificiale esterna.",
   "tab-archive":
