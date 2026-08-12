@@ -52,6 +52,7 @@
   <button class="tab-btn" data-tab="tab-workflows" role="tab" aria-selected="false">Workflow</button>
   <button class="tab-btn" data-tab="tab-characters" role="tab" aria-selected="false">Personaggi</button>
   <button class="tab-btn" data-tab="tab-charsheet" role="tab" aria-selected="false">🪪 Scheda Personaggio</button>
+  <button class="tab-btn" data-tab="tab-imageanalysis" role="tab" aria-selected="false">🔎 Immagine→Prompt</button>
   <button class="tab-btn" data-tab="tab-prompt" role="tab" aria-selected="false">Crea Scena</button>
   <button class="tab-btn" data-tab="tab-archive" role="tab" aria-selected="false">Archivio</button>
   <button class="tab-btn" data-tab="tab-backup" role="tab" aria-selected="false">☁️ Backup</button>
@@ -281,6 +282,40 @@
         <button type="button" id="charsheet-noapi-copyimg-btn" class="btn small">📋 Copia immagine personaggio</button>
       </div>
       <div id="charsheet-noapi-list" class="card-grid"></div>
+    </div>
+  </section>
+
+  <!-- IMAGE -> PROMPT -->
+  <section id="tab-imageanalysis" class="tab-panel">
+    <h2>🔎 Immagine → Prompt</h2>
+    <p class="hint">Carica un'immagine: la analizzo con l'IA e genero un prompt inglese dettagliato per ricrearla il più fedelmente possibile (soggetto, posa, sfondo, luce, stile, colori...). Richiede una API key di Google Gemini in "IA Esterne" — usata solo per analizzare l'immagine, non per generarla.</p>
+    <div class="card form-grid">
+      <label class="full">Immagine da analizzare
+        <input type="file" id="imganalysis-upload" accept="image/*">
+      </label>
+      <div class="full" id="imganalysis-preview"></div>
+      <label class="full checkbox-row">
+        <input type="checkbox" id="imganalysis-reference-toggle">
+        Adatta a un personaggio di riferimento (mantieni la sua identità, non stravolgerla)
+      </label>
+      <label class="full" id="imganalysis-reference-picker-wrap" hidden>Personaggio di riferimento
+        <select id="imganalysis-reference-select"></select>
+        <span class="hint small">Il prompt generato includerà una nota esplicita: il personaggio nell'immagine è quello di riferimento, la sua identità va mantenuta senza stravolgerla.</span>
+      </label>
+      <div class="full form-actions">
+        <button type="button" id="imganalysis-run-btn" class="btn success">🔍 Analizza immagine</button>
+      </div>
+      <div class="full status-box" id="imganalysis-status"></div>
+    </div>
+    <div class="card" id="imganalysis-result-card" hidden>
+      <div class="output-header">
+        <h3>Prompt generato (EN)</h3>
+        <button id="imganalysis-copy-btn" class="btn small" type="button">📋 Copia</button>
+      </div>
+      <textarea id="imganalysis-output" rows="6" readonly></textarea>
+      <div class="form-actions">
+        <button type="button" id="imganalysis-use-btn" class="btn primary">➡️ Usa in Crea Scena</button>
+      </div>
     </div>
   </section>
 

@@ -4,6 +4,7 @@ import { ComfyUIClient, ComfyUIError } from "./comfyui.js";
 import { initWorkflows } from "./workflows.js";
 import { initCharacters } from "./characters.js";
 import { initCharacterSheet } from "./charactersheet.js";
+import { initImageAnalysis } from "./imageanalysis.js";
 import { initPrompts } from "./prompts.js";
 import { initDirector } from "./director.js";
 import { initArchive } from "./archive.js";
@@ -146,6 +147,7 @@ async function init() {
   await initCharacters();
   initCharacterSheet();
   initPrompts();
+  initImageAnalysis();
   initDirector();
   initScenes();
   await initArchive();

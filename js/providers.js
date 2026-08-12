@@ -48,7 +48,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function blobToBase64(blob) {
+export async function blobToBase64(blob) {
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -65,7 +65,7 @@ function base64ToBlob(base64, mimeType) {
   return new Blob([bytes], { type: mimeType });
 }
 
-async function readErrorText(response) {
+export async function readErrorText(response) {
   try {
     return await response.text();
   } catch {
