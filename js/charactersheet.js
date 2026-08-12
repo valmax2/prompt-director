@@ -141,8 +141,8 @@ async function generateOneViewLocal(client, workflow, character, view, mode) {
 
 // External providers only take a single flat prompt + one optional reference
 // image (no node graph, no seed/resolution mapping) — much simpler than the
-// local path, but reference-image support varies by provider (Leonardo.ai
-// has none), so identity consistency across the 6 views is weaker there.
+// local path, but reference-image support varies by provider, so identity
+// consistency across the 6 views is weaker on providers that lack it.
 async function generateOneViewExternal(providerId, providerSettings, providerMeta, character, view, mode) {
   const positive = buildPositivePrompt(character, view, mode);
   const negative = buildNegativePrompt();

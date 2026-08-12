@@ -8,6 +8,8 @@
 // Meta AI is intentionally not included: it has no public third-party API
 // for image generation that can be called from a browser.
 
+import { getCustomProviderLink } from "./state.js";
+
 export class ProviderError extends Error {}
 
 export const PROVIDERS = [
@@ -29,23 +31,26 @@ export const PROVIDERS = [
     supportsReferenceImage: true,
     consumerAppUrl: "https://chatgpt.com/",
   },
-  {
-    id: "leonardo",
-    label: "Leonardo.ai",
-    keyLabel: "API Key (Leonardo.ai)",
-    defaultModel: "",
-    modelHint: "ID modello Leonardo opzionale (vuoto = default della piattaforma)",
-    supportsReferenceImage: false,
-    consumerAppUrl: "https://app.leonardo.ai/",
-  },
 ];
 
+// "custom" isn't in PROVIDERS above since it has no fixed identity (name,
+// URL) — that's whatever the user typed into the "IA personalizzata" card,
+// stored via state.js rather than hardcoded here. getProviderMeta builds its
+// meta on the fly from that saved link instead of looking it up statically.
 export function getProviderMeta(id) {
+  if (id === "custom") {
+    const custom = getCustomProviderLink();
+    return {
+      id: "custom",
+      label: custom?.name || "IA personalizzata",
+      keyLabel: null,
+      defaultModel: "",
+      modelHint: "",
+      supportsReferenceImage: true,
+      consumerAppUrl: custom?.url || null,
+    };
+  }
   return PROVIDERS.find((p) => p.id === id) || null;
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function blobToBase64(blob) {
@@ -157,52 +162,9 @@ async function generateWithOpenAI({ apiKey, model }, positive, negative, referen
   );
 }
 
-// --- Leonardo.ai ---
-async function generateWithLeonardo({ apiKey, model }, positive, negative) {
-  if (!apiKey) throw new ProviderError("Leonardo.ai: API key mancante.");
-
-  const createResponse = await fetch("https://cloud.leonardo.ai/api/rest/v1/generations", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      prompt: positive,
-      negative_prompt: negative || undefined,
-      modelId: model || undefined,
-      num_images: 1,
-      width: 1024,
-      height: 1024,
-    }),
-  });
-  if (!createResponse.ok) {
-    throw new ProviderError(`Leonardo.ai ha risposto ${createResponse.status}: ${await readErrorText(createResponse)}`);
-  }
-  const createData = await createResponse.json();
-  const generationId = createData?.sdGenerationJob?.generationId;
-  if (!generationId) throw new ProviderError("Leonardo.ai: risposta inattesa dalla creazione della generazione.");
-
-  const start = Date.now();
-  while (Date.now() - start < 120000) {
-    await sleep(2500);
-    const statusResponse = await fetch(`https://cloud.leonardo.ai/api/rest/v1/generations/${generationId}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (!statusResponse.ok) continue;
-    const statusData = await statusResponse.json();
-    const generation = statusData?.generations_by_pk;
-    if (generation?.status === "COMPLETE") {
-      const images = generation.generated_images || [];
-      if (images.length === 0) throw new ProviderError("Leonardo.ai: generazione completata senza immagini.");
-      return Promise.all(images.map(async (img) => (await fetch(img.url)).blob()));
-    }
-    if (generation?.status === "FAILED") throw new ProviderError("Leonardo.ai: generazione fallita.");
-  }
-  throw new ProviderError("Leonardo.ai: timeout in attesa del risultato.");
-}
-
 const GENERATORS = {
   gemini: generateWithGemini,
   openai: generateWithOpenAI,
-  leonardo: generateWithLeonardo,
 };
 
 /**
@@ -210,6 +172,11 @@ const GENERATORS = {
  * Returns an array of Blob.
  */
 export async function generateImageExternal({ provider, settings, positive, negative, referenceBlob }) {
+  if (provider === "custom") {
+    throw new ProviderError(
+      "L'IA personalizzata non ha un'API standard riconosciuta da questa app: usa \"Genera senza API — copia e apri\" invece."
+    );
+  }
   const generator = GENERATORS[provider];
   if (!generator) throw new ProviderError(`Provider sconosciuto: ${provider}`);
   if (!positive) throw new ProviderError("Prompt positivo mancante.");

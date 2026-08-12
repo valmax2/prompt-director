@@ -5,6 +5,7 @@ const ACTIVE_PROVIDER_KEY = "comic-studio:active-provider";
 const PROVIDERS_KEY = "comic-studio:providers";
 const VOICE_GUIDE_ENABLED_KEY = "comic-studio:voice-guide-enabled";
 const VOICE_GUIDE_VOICE_KEY = "comic-studio:voice-guide-voice";
+const CUSTOM_PROVIDER_LINK_KEY = "comic-studio:custom-provider-link";
 
 const listeners = new Set();
 
@@ -121,4 +122,28 @@ export function setVoiceGuideVoiceName(name) {
   if (name) localStorage.setItem(VOICE_GUIDE_VOICE_KEY, name);
   else localStorage.removeItem(VOICE_GUIDE_VOICE_KEY);
   notify("voice-guide-voice-updated", name);
+}
+
+// --- Custom external-AI link: any site the user wants (Leonardo.ai,
+// Midjourney, Bing Image Creator, ...) instead of a fixed, hardcoded
+// provider. No API integration — this only feeds the "IA personalizzata"
+// entry in the provider picker for the copy-and-paste generation path. ---
+
+export function getCustomProviderLink() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_PROVIDER_LINK_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCustomProviderLink({ name, url }) {
+  localStorage.setItem(CUSTOM_PROVIDER_LINK_KEY, JSON.stringify({ name, url }));
+  notify("custom-provider-link-updated", { name, url });
+}
+
+export function clearCustomProviderLink() {
+  localStorage.removeItem(CUSTOM_PROVIDER_LINK_KEY);
+  notify("custom-provider-link-updated", null);
 }

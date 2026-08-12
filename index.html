@@ -81,7 +81,7 @@
       </div>
       <div class="card guide-card">
         <h3 class="step-title">☁️ IA Esterne</h3>
-        <p>Inserisci le API key di Google Gemini, OpenAI o Leonardo.ai per generare immagini senza ComfyUI.</p>
+        <p>Inserisci le API key di Google Gemini o OpenAI, oppure il link a qualsiasi altra IA tu voglia, per generare immagini senza ComfyUI.</p>
         <button type="button" class="btn small" data-goto-tab="tab-providers">Vai →</button>
       </div>
       <div class="card guide-card">
@@ -199,20 +199,20 @@
       </div>
     </div>
 
-    <div class="card provider-card" data-provider="leonardo">
+    <div class="card provider-card" data-provider="custom">
       <div class="provider-card-header">
-        <h3>Leonardo.ai</h3>
-        <label class="toggle"><input type="radio" name="active-provider" value="leonardo"> Provider attivo</label>
+        <h3>🔗 IA personalizzata</h3>
+        <label class="toggle"><input type="radio" name="active-provider" value="custom"> Provider attivo</label>
       </div>
       <div class="form-grid">
-        <label>API Key (Leonardo.ai)
-          <input type="password" class="provider-apikey" autocomplete="off">
+        <label>Nome (facoltativo)
+          <input type="text" class="provider-custom-name" placeholder="es. Leonardo.ai, Midjourney, Bing...">
         </label>
-        <label>ID Modello (opzionale)
-          <input type="text" class="provider-model" placeholder="vuoto = default piattaforma">
+        <label>Link
+          <input type="url" class="provider-custom-url" placeholder="https://...">
         </label>
       </div>
-      <p class="hint small">Al momento non supporta immagine di riferimento (solo testo → immagine).</p>
+      <p class="hint small">Metti qui il link a qualsiasi IA tu voglia usare. Non essendo un'API standard, funziona solo con "Genera senza API — copia e apri" (apre il link, tu incolli prompt e immagine a mano): non può generare in automatico da questa app.</p>
       <div class="form-actions">
         <button type="button" class="btn primary provider-save">Salva</button>
         <button type="button" class="btn ghost provider-clear">Cancella</button>
@@ -317,7 +317,7 @@
     <h2>🪪 Scheda Personaggio</h2>
     <p class="hint">Genera automaticamente 6 immagini dello stesso personaggio da angolazioni diverse (tipo scheda/model sheet da studio: fronte, 3/4, profilo, ecc.), utili come riferimento completo. Usa il workflow attivo nella scheda Workflow e le foto del personaggio scelto per mantenere la coerenza.</p>
     <p class="hint small">La risoluzione reale dipende dal nodo "Risoluzione" mappato nel workflow e dal modello usato: qui viene richiesta la massima definizione compatibile, ma un vero upscale oltre la risoluzione nativa del modello richiede un nodo di upscale nel workflow stesso.</p>
-    <p class="hint small">Funziona anche con "IA Esterna" (ChatGPT/Gemini/Leonardo con API key): la modalità si sceglie in alto nell'intestazione, come nel resto dell'app. In quel caso non serve un workflow, ma la coerenza tra le 6 immagini dipende dal provider (alcuni non supportano l'immagine di riferimento).</p>
+    <p class="hint small">Funziona anche con "IA Esterna" (Gemini/OpenAI con API key, o un'IA personalizzata a tua scelta): la modalità si sceglie in alto nell'intestazione, come nel resto dell'app. In quel caso non serve un workflow, ma la coerenza tra le 6 immagini dipende dal provider (alcuni non supportano l'immagine di riferimento).</p>
     <div class="card form-grid">
       <label>Personaggio
         <select id="charsheet-character-select"></select>

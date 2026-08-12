@@ -18,7 +18,7 @@ const PAGE_GUIDES = {
   "tab-connection":
     "Sei nella scheda Connessione ComfyUI. Qui colleghi l'app al tuo ComfyUI in rete locale: inserisci indirizzo IP e porta, se serve anche utente e password, poi premi Connetti per verificare che funzioni.",
   "tab-providers":
-    "Sei nella scheda IA Esterne. Qui inserisci le chiavi API di intelligenze artificiali come Google Gemini, OpenAI o Leonardo punto AI, per generare immagini senza bisogno di ComfyUI.",
+    "Sei nella scheda IA Esterne. Qui inserisci le chiavi API di Google Gemini o OpenAI, oppure il link a qualsiasi altra intelligenza artificiale tu voglia usare, per generare immagini senza bisogno di ComfyUI.",
   "tab-workflows":
     "Sei nella scheda Workflow. Qui carichi i tuoi flussi ComfyUI in formato JSON, colleghi i nodi giusti per prompt, seme, risoluzione e immagini, e puoi controllare quali modelli sono compatibili con ogni flusso caricato.",
   "tab-characters":
